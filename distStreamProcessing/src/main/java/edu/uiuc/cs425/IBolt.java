@@ -1,6 +1,6 @@
 package edu.uiuc.cs425;
 
-public interface BBolt {
+public interface IBolt {
 
 	void execute(Object Tuple);
 	
