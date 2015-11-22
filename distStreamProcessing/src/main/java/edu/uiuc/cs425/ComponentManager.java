@@ -6,13 +6,20 @@ import java.util.List;
 public class ComponentManager {
 
 		
-	private	List<String>		WorkersList;
+	private	List<String>		m_lWorkersList;
+	private int					m_nNextAssignableWorker;
 	
 	//Methods
 
+	public void Initialize()
+	{
+		m_nNextAssignableWorker = 0;
+	}
+	
+	
 	public void AdmitNewWorker(String IP) //(Thrift)
 	{
-		WorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())));
+		m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())));
 	}
 		
 	
@@ -21,6 +28,20 @@ public class ComponentManager {
 		//Get the topology from the jar. 
 		//Receive the parallelism level
 		//Do Round Robin
+		
+		int parallelismLevel = 0; //Get from the jar
+		
+		//For each component/task
+		for(int i=0; i<parallelismLevel; i++)
+		{
+			//Add task at next available node
+			
+			//Updating this in this way so that there is continuation from one job to next
+			//and one component to next
+			m_nNextAssignableWorker = (m_nNextAssignableWorker + 1) % m_lWorkersList.size();
+		}
+		
+		
 		
 	}
 	
