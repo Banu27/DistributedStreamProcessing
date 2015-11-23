@@ -9,6 +9,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -16,8 +18,9 @@ import java.util.jar.JarFile;
 public class ComponentManager implements Runnable{
 
 		
-	private	List<String>		m_lWorkersList;
-	private int					m_nNextAssignableWorker;
+	private	List<String>									m_lWorkersList;
+	private int												m_nNextAssignableWorker;
+	private HashMap<String, List<TopologyComponent>> 		m_hTopologyList;
 	
 	//Methods
 
@@ -31,91 +34,98 @@ public class ComponentManager implements Runnable{
 	{
 		m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())));
 	}
-		
 	
-	public void ReceiveNewJob(String jobname, String pathToJar)  //(Thrift)
+	public void ReceiveNewJob(String JobName, File file, String TopologyName)
+	{
+		//THis function does file reading 
+		//saves file in the disk and gets the localpath
+		String pathToJar = null;
+		RetrieveTopologyComponents(JobName, pathToJar, TopologyName);
+		//Send jars to all the workers.
+		StartComponentsAtNodes(JobName, pathToJar);
+	}
+	
+	
+	void StartComponentsAtNodes(String Jobname, String pathToJar)
+	{
+		List<TopologyComponent> Components = m_hTopologyList.get(Jobname);
+		
+		try {
+			URL[] urls = { new URL("jar:file:" + pathToJar+"!/") };
+			URLClassLoader cl = URLClassLoader.newInstance(urls);
+			
+			Iterator<TopologyComponent> iterator = Components.iterator();
+			while(iterator.hasNext())
+			{
+				TopologyComponent component = iterator.next();
+				String classname = component.getM_sComponentName();
+				Class<?> componentClass = cl.loadClass(classname);
+				
+				for(int i=0; i<component.getM_nParallelismLevel(); i++)
+				{
+					//Call the start task at the worker
+					
+				}
+				
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void RetrieveTopologyComponents(String JobName, String pathToJar, String TopologyName)  //(Thrift)
 	{
 		//Get the topology from the jar. 
 		//Receive the parallelism level
 		//Do Round Robin
-		
-		JarFile jarFile;
 		try {
-			jarFile = new JarFile(pathToJar);
-			Enumeration<JarEntry> e = jarFile.entries();
-
 			URL[] urls = { new URL("jar:file:" + pathToJar+"!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 
-			    while (e.hasMoreElements()) {
-			        JarEntry je = (JarEntry) e.nextElement();
-			        if(je.isDirectory() || !je.getName().endsWith(".class")){
-			            continue;
-			        }
-			    // -6 because of .class
-			    String className = je.getName().substring(0,je.getName().length()-6);
-			    className = className.replace('/', '.');
-			    try {
-					Class<?> c = cl.loadClass(className);
-					try {
-						Object object1 = c.newInstance();
-						Method[] methods = c.getMethods();
-						System.out.println("Super class : " + c.getInterfaces()[0].getName());
-						for(Method nm : methods)
-						{
-							System.out.println("Here : " + nm.getName());
-						}
-						Method method = c.getMethod("main");
-						System.out.println("Invoked method name: " + method.getName());
-						int i = (Integer) method.invoke(object1);
-						System.out.println(String.valueOf(i));
+			TopologyName = TopologyName.replace('/', '.');
+			Class<?> topologyClass = cl.loadClass(TopologyName);
+			Object topologyObject = topologyClass.newInstance();
 
-					} catch (InstantiationException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (IllegalAccessException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (IllegalArgumentException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (InvocationTargetException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (NoSuchMethodException e1) {
-						System.out.println("Method not present");
-						e1.printStackTrace();
-					} catch (SecurityException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				} catch (ClassNotFoundException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			    }
+			try {
+				Method createTopology = topologyClass.getMethod("CreateTopology");
+				m_hTopologyList.put(JobName, (List<TopologyComponent>) createTopology.invoke(topologyObject));
+			} catch (NoSuchMethodException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Create Topology method not present. Aborting!!");
+				e.printStackTrace();
+				return;
+			} catch (SecurityException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
-		
-		int parallelismLevel = 0; //Get from the jar
-		
-		//For each component/task
-		for(int i=0; i<parallelismLevel; i++)
-		{
-			//Add task at next available node
-			
-			//Updating this in this way so that there is continuation from one job to next
-			//and one component to next
-			m_nNextAssignableWorker = (m_nNextAssignableWorker + 1) % m_lWorkersList.size();
-		}
-		
-		
-		
 	}
-	
+
 	public void ScheduleJob()	//Calls start job after creating calling AddTask
 	{
 		//Called from Receive new job
