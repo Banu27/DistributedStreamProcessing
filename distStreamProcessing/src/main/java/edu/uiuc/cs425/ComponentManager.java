@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class ComponentManager {
+public class ComponentManager implements Runnable{
 
 		
 	private	List<String>		m_lWorkersList;
@@ -59,7 +59,13 @@ public class ComponentManager {
 					Class<?> c = cl.loadClass(className);
 					try {
 						Object object1 = c.newInstance();
-						Method method = c.getMethod("getNum");
+						Method[] methods = c.getMethods();
+						System.out.println("Super class : " + c.getInterfaces()[0].getName());
+						for(Method nm : methods)
+						{
+							System.out.println("Here : " + nm.getName());
+						}
+						Method method = c.getMethod("main");
 						System.out.println("Invoked method name: " + method.getName());
 						int i = (Integer) method.invoke(object1);
 						System.out.println(String.valueOf(i));
@@ -77,7 +83,7 @@ public class ComponentManager {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					} catch (NoSuchMethodException e1) {
-						// TODO Auto-generated catch block
+						System.out.println("Method not present");
 						e1.printStackTrace();
 					} catch (SecurityException e1) {
 						// TODO Auto-generated catch block
@@ -121,6 +127,12 @@ public class ComponentManager {
 	private long GetMyLocalTime()
 	{
 		return new Date().getTime();
+	}
+
+
+	public void run() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }
