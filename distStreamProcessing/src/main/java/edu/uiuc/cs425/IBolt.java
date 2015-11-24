@@ -2,6 +2,7 @@ package edu.uiuc.cs425;
 
 public interface IBolt {
 
-	void execute(Object Tuple);
+	// consume input tuple and emit output tuple
+	public void execute(Tuple tuple);
 	
 }
