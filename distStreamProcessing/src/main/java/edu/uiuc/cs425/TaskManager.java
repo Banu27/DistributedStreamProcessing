@@ -23,7 +23,7 @@ public class TaskManager implements Runnable {
 		m_nInstanceId			= id;
 		m_oBolt					= obj;
 		m_oNM					= oNM;
-		m_oDisruptor = new DisruptorBoltWrapper(2048, m_oBolt);
+		m_oDisruptor 			= new DisruptorBoltWrapper(2048, m_oBolt);
 		m_oDisruptor.Init();
 	}
 	
