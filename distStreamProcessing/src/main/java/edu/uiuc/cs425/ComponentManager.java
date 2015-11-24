@@ -1,19 +1,30 @@
 package edu.uiuc.cs425;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+
+import org.apache.thrift.TException;
 
 public class ComponentManager implements Runnable{
 
@@ -21,25 +32,51 @@ public class ComponentManager implements Runnable{
 	private	List<String>									m_lWorkersList;
 	private int												m_nNextAssignableWorker;
 	private HashMap<String, List<TopologyComponent>> 		m_hTopologyList;
-	
+	private Logger											m_oLogger;
+	private int												m_nCommandServicePort;
+	private String											m_sJarFilesDir;
 	//Methods
 
 	public void Initialize()
 	{
 		m_nNextAssignableWorker = 0;
+
+		//This needs to be assigned	
+		m_sJarFilesDir = null;
 	}
 	
 	
 	public void AdmitNewWorker(String IP) //(Thrift)
 	{
-		m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())));
+		//m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())));
+		m_lWorkersList.add(IP);
 	}
 	
-	public void ReceiveNewJob(String JobName, File file, String TopologyName)
+	public int WriteFileIntoDir(ByteBuffer file, String filename)
 	{
-		//THis function does file reading 
-		//saves file in the disk and gets the localpath
-		String pathToJar = null;
+		FileOutputStream fos;
+		try {
+				fos = new FileOutputStream(m_sJarFilesDir + '/' + filename);
+				WritableByteChannel channel = Channels.newChannel(fos);
+				channel.write(file);
+				channel.close();
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+				return Commons.FAILURE;
+			} catch (IOException e) {
+				e.printStackTrace();
+				return Commons.FAILURE;
+			}
+			return Commons.SUCCESS;
+	}
+	
+	
+
+	public void ReceiveNewJob(String JobName, ByteBuffer file, String TopologyName, String filename)
+	{
+		//Client has to give the file here after converting to bytebuffer
+		WriteFileIntoDir(file, filename);
+		String pathToJar = m_sJarFilesDir + '/' + filename;
 		RetrieveTopologyComponents(JobName, pathToJar, TopologyName);
 		//Send jars to all the workers.
 		StartComponentsAtNodes(JobName, pathToJar);
@@ -64,6 +101,11 @@ public class ComponentManager implements Runnable{
 				for(int i=0; i<component.getM_nParallelismLevel(); i++)
 				{
 					//Call the start task at the worker
+					CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();
+					if(Commons.SUCCESS == ProxyTemp.Initialize(m_lWorkersList.get(m_nNextAssignableWorker), m_nCommandServicePort, m_oLogger))
+					{
+						ProxyTemp.CreateInstance(classname, pathToJar);
+					}
 					
 				}
 				
@@ -72,6 +114,9 @@ public class ComponentManager implements Runnable{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

@@ -11,6 +11,6 @@ public class App
     	String path = "/Users/banumuthukumar/Desktop/myfile.jar";
         System.out.println( "Hello World!" );
         ComponentManager myObj = new ComponentManager();
-        myObj.ReceiveNewJob("xyz", path);
+       //  myObj.ReceiveNewJob("xyz", path);
     }
 }
