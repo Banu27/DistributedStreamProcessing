@@ -1,5 +1,6 @@
 package edu.uiuc.cs425;
 
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -87,6 +88,11 @@ public class NodeManager {
 
 	}
 	
+	public void ReceiveProcessedTuple(Tuple tuple, TaskManager task)
+	{
+		//add to disruptor queue
+	}
+	
 	//AddTask(String compName, String jobname, int instanceId)
 	//ReceiveProcessedTuple(Tuple, pointerToTaskMan)
 	//StartJob(String jobname) //This is because we cannot start it in AddTask - wait to add all the tasks)
@@ -137,5 +143,4 @@ public class NodeManager {
 
 	}
 
-	
 }

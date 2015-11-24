@@ -39,16 +39,21 @@ public class TaskManager implements Runnable {
 
 	}
 	
+	// this call is made by spout/bolt when they emit tuples. the emit impl is in the BComponent class
 	public void SendTupleToNM(Tuple tuple)
 	{
-		m_oNM.ReceiveTupleFromTask(tuple);
+		m_oNM.ReceiveProcessedTuple(tuple, this);
 	}
 	
+	// this is called from NM. This adds the tuple to the disruptor. A correponding
+	// event handler will be invoked by the disruptor frameowrk to handle this tuple
 	public void AddTuple(Tuple tuple)
 	{
 		m_oDisruptor.WriteData(tuple);
 	}
 
+	
+	// this method is run in case of spouts. 
 	public void run() {
 		while(true)
 		{

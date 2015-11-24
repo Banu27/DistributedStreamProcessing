@@ -6,7 +6,7 @@ public class BComponent {
 	
 	public void emit(Tuple tuple)
 	{
-		m_oTaskMgr.SendTupleToNM(tuple)
+		m_oTaskMgr.SendTupleToNM(tuple);
 	}
 	
 	public void SetTaskManager(TaskManager task)
