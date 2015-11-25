@@ -27,8 +27,14 @@ import org.apache.commons.lang3.SerializationUtils;
 
 public class NodeManager implements Runnable {
 
-	private HashMap<String, List<String>> m_hTaskListPerJob;
-	private HashMap<String, List<String>> m_hClusterInfo;
+	// key: "<JobName>:<Component>:<Instance>" -> Task
+	private HashMap<String, TaskManager> m_hTaskMap;
+	
+	// key: "<JobName>:<Component>:<Instance>" -> NodeIP
+	// This map will be updated by the watch registered with
+	// the zookeeper
+	private HashMap<String, String> m_hClusterInfo;
+	
 	private HashMap<String, List<TopologyComponent>> m_hTopologyList;
 	private HashMap<String, ClassAndInstance> m_hComponentInstances;
 
@@ -60,11 +66,11 @@ public class NodeManager implements Runnable {
 	private ConfigAccessor m_oConfig;
 
 	public NodeManager() {
-		m_hTaskListPerJob = new HashMap<String, List<String>>();
-		m_hClusterInfo = new HashMap<String, List<String>>();
-		m_hTopologyList = new HashMap<String, List<TopologyComponent>>();
-		m_hComponentInstances = new HashMap<String, ClassAndInstance>();
-		m_oMutexOutputTuple = new ReentrantLock(true);
+		m_hTaskMap 					= new HashMap<String, TaskManager>();
+		m_hClusterInfo 				= new HashMap<String, String>();
+		m_hTopologyList 			= new HashMap<String, List<TopologyComponent>>();
+		m_hComponentInstances 		= new HashMap<String, ClassAndInstance>();
+		m_oMutexOutputTuple 		= new ReentrantLock(true);
 		try {
 			m_sMyIp = InetAddress.getLocalHost().getHostAddress();
 		} catch (UnknownHostException e1) {
@@ -78,12 +84,13 @@ public class NodeManager implements Runnable {
 		m_oOutputTupleQ.InitNodeOutput(this);
 		m_oLogger = logger;
 		m_oConfig = config;
+		m_sJarFilesDir = m_oConfig.JarPath();
 	}
 
-	public int WriteFileIntoDir(ByteBuffer file, String filename) {
+	private int WriteFileIntoDir(ByteBuffer file, String filename) {
 		FileOutputStream fos;
 		try {
-			fos = new FileOutputStream(m_sJarFilesDir + '/' + filename);
+			fos = new FileOutputStream(filename);
 			WritableByteChannel channel = Channels.newChannel(fos);
 			channel.write(file);
 			channel.close();
@@ -97,11 +104,11 @@ public class NodeManager implements Runnable {
 		return Commons.SUCCESS;
 	}
 
-	public void ReceiveJob(String JobName, ByteBuffer jar, String TopologyName, String Filename) 
+	public void ReceiveTopology(ByteBuffer jar, String topologyName) 
 	{
-		WriteFileIntoDir(jar, Filename);
-		String pathToJar = m_sJarFilesDir + '/' + Filename;
-		RetrieveTopologyComponents(JobName, pathToJar, TopologyName);
+		String pathToJar = m_sJarFilesDir + '/' + topologyName;
+		WriteFileIntoDir(jar, pathToJar);
+		RetrieveTopologyComponents(pathToJar, topologyName);
 		// Send jars to all the workers.
 	}
 
@@ -155,7 +162,7 @@ public class NodeManager implements Runnable {
 	// - wait to add all the tasks)
 
 	@SuppressWarnings("unchecked")
-	private void RetrieveTopologyComponents(String JobName, String pathToJar, String TopologyName) // (Thrift)
+	private void RetrieveTopologyComponents(String pathToJar, String topologyName) // (Thrift)
 	{
 		// Get the topology from the jar.
 		// Receive the parallelism level
@@ -164,12 +171,12 @@ public class NodeManager implements Runnable {
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 
-			TopologyName = TopologyName.replace('/', '.');
-			Class<?> topologyClass = cl.loadClass(TopologyName);
+			topologyName = topologyName.replace('/', '.');
+			Class<?> topologyClass = cl.loadClass(topologyName);
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
-			m_hTopologyList.put(JobName, (List<TopologyComponent>) createTopology.invoke(topologyObject));
+			m_hTopologyList.put(topologyName, (List<TopologyComponent>) createTopology.invoke(topologyObject));
 
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
@@ -213,8 +220,18 @@ public class NodeManager implements Runnable {
 	public String GetNextNode(Tuple tuple) {
 		// look at the job, component and instance info in
 		// the tuple and select the node
-		String retStr = null;
-		return retStr;
+		String key = tuple.m_sJobname + ":" + tuple.m_sDestCompName + ":" + 
+				Integer.toString(tuple.m_nDestInstId);
+		String sIP = null;
+		if(m_hClusterInfo.containsKey(key))
+		{
+			sIP = m_hClusterInfo.get(key);
+		} else
+		{
+			m_oLogger.Error("Unable to find the IP containing the instance " + key + ". Tuple "
+						+ "will not proceed to next components" );
+		} 
+		return sIP;
 	}
 
 	// this call is made by the output disruptor handler
@@ -224,7 +241,8 @@ public class NodeManager implements Runnable {
 
 		m_oMutexOutputTuple.lock();
 		for (int i = 0; i < tuples.size(); ++i) {
-			String sIP = GetNextNode(tuple);
+			String sIP = GetNextNode(tuples.get(i));
+			if(sIP == null) continue;
 			Queue<Tuple> queue = m_OutputTuples.get(sIP);
 			if (queue == null)
 				m_OutputTuples.put(sIP, new LinkedList<Tuple>());
@@ -238,6 +256,18 @@ public class NodeManager implements Runnable {
 	public void SendTupleToTask(Tuple tuple) {
 		//look at the destination fields in the tuple and decide which 
 		//task should get it
+		String key = tuple.m_sJobname + ":" + tuple.m_sDestCompName + ":" + 
+							Integer.toString(tuple.m_nDestInstId);
+		if(m_hTaskMap.containsKey(key))
+		{
+			TaskManager mgr = m_hTaskMap.get(key);
+			mgr.AddTuple(tuple);
+		} else
+		{
+			m_oLogger.Error("Tuple send to wrong node. Tuple will not move forward");
+		}
+		
+		
 	}
 
 	public void ReceiveTuplesFromOutside(List<ByteBuffer> tuples)
@@ -264,7 +294,7 @@ public class NodeManager implements Runnable {
 
 			// get the keys
 			Set<String> sIPs = m_OutputTuples.keySet();
-			// iterate through the keys
+			// iterate through the keysq
 			for (String sIP : sIPs) {
 				// send list of tuples to the other node
 				Queue<Tuple> queue = m_OutputTuples.get(sIP);

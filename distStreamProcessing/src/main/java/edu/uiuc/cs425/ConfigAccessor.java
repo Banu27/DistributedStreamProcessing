@@ -17,9 +17,7 @@ import java.io.IOException;
    <Heartbeat port="8192" interval="2000" gossipNodes="3" /> 
    <Failure interval="3000" checkPoint="" />
    <Logger path="" />
-   <FileReport port="3425" interval="10000" />
-   <Replication interval="30000" factor="3" />
-   <SDFS dataDir="" clientSrcDir="" clientDestDir="" />
+   <Topologies jarPath="" />
 </MembershipConfig>
  */
 
@@ -33,34 +31,17 @@ public class ConfigAccessor {
 	private String      m_sLogPath;
 	private String      m_sCPPath;
 	private int			m_nLossRate;
-	private int         m_nFRPort;
-	private int 		m_nFRInterval;
-	private int			m_nReplicationFactor;;
-	private int 		m_nReplicationCheckInterval;
-	private String 		m_sSDFSDataDir;
-	private String      m_sClientSrcDir;
-	private String      m_sClientDestDir;
+	private String      m_sJarPath;
 	
 	public ConfigAccessor()
 	{
 		
 	}
 	
-	public String SDFSDataDir()
+	public String   JarPath()
 	{
-		return m_sSDFSDataDir;
+		return m_sJarPath;
 	}
-	
-	public String ClientSrcDir()
-	{
-		return m_sClientSrcDir;
-	}
-	
-	public String ClientDestDir()
-	{
-		return m_sClientDestDir;
-	}
-	
 	public String       LogPath()
 	{
 		return m_sLogPath;
@@ -106,25 +87,6 @@ public class ConfigAccessor {
 		return m_sCPPath;
 	}
 	
-	public int GetFRPort()
-	{
-		return m_nFRPort;
-	}
-	
-	public int GetFRInterval()
-	{
-		return m_nFRInterval;
-	}
-	
-	public int GetReplicationFactor()
-	{
-		return m_nReplicationFactor;
-	}
-	
-	public int GetReplicationCheckInterval()
-	{
-		return m_nReplicationCheckInterval;
-	}
 	
 	public int Initialize(String sXMLFilePath)
 	{
@@ -185,26 +147,7 @@ public class ConfigAccessor {
 				Element eElement = (Element) nNode;
 				m_sLogPath  = eElement.getAttribute("path");
 			}
-			else if (nNode.getNodeName() == "FileReport")
-			{
-				Element eElement = (Element) nNode;
-				m_nFRPort  = Integer.parseInt(eElement.getAttribute("port"));
-				m_nFRInterval = Integer.parseInt(eElement.getAttribute("interval"));
-			}
-			else if (nNode.getNodeName() == "Replication")
-			{
-				Element eElement = (Element) nNode;
-				m_nReplicationFactor = Integer.parseInt(eElement.getAttribute("factor"));
-				m_nReplicationCheckInterval = Integer.parseInt(eElement.getAttribute("interval"));
-			}
-			else if (nNode.getNodeName() == "SDFS")
-			{
-				Element eElement = (Element) nNode;
-				
-				m_sSDFSDataDir		= eElement.getAttribute("dataDir");
-				m_sClientSrcDir 	= eElement.getAttribute("clientSrcDir");
-				m_sClientDestDir 	= eElement.getAttribute("clientDestDir");
-			}
+			
 		}
 		return Commons.SUCCESS;
 	}

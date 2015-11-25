@@ -95,10 +95,10 @@ public class ComponentManager implements Runnable{
 			while(iterator.hasNext())
 			{
 				TopologyComponent component = iterator.next();
-				String classname = component.getM_sComponentName();
+				String classname = component.getComponentName();
 				Class<?> componentClass = cl.loadClass(classname);
 				
-				for(int i=0; i<component.getM_nParallelismLevel(); i++)
+				for(int i=0; i<component.getParallelismLevel(); i++)
 				{
 					//Call the start task at the worker
 					CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();

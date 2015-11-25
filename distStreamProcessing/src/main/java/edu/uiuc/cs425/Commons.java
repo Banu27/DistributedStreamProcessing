@@ -26,6 +26,11 @@ public class Commons {
 	public static int aliveNumber = NUMBER_OF_VMS;
 	public static final String NODE_INTROCUDER = "introducer";
 	public static final String NODE_PARTICIPANT = "participant";
+	public static final int BOLT = 0;
+	public static final int SPOUT = 1;
+	public static final int GROUPING_SHUFFLE = 0;
+	public static final int GROUPING_FIELD = 1;
+	public static final String sJarDirs = "topologies";
 	
 	//Floyd's - Random 
 	static Set<Integer> RandomK(int m, int max, long seed)

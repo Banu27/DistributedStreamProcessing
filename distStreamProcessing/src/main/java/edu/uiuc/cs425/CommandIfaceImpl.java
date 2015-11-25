@@ -21,7 +21,7 @@ public class CommandIfaceImpl implements Iface {
 		}
 		
 		public void ReceiveJob(String JobName, ByteBuffer data, String TopologyName, String Filename) throws TException {
-			m_oNodeManager.ReceiveJob(JobName, data, TopologyName, Filename);
+			//m_oNodeManager.ReceiveJob(JobName, data, TopologyName, Filename);
 		}
 		
 		public void CreateInstance(String classname, String pathToJar) {
@@ -29,7 +29,8 @@ public class CommandIfaceImpl implements Iface {
 			m_oNodeManager.CreateInstance(classname, pathToJar);
 		}
 
-		public void SendTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
+
+		public void TransferTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
 			// TODO Auto-generated method stub
 			
 		}

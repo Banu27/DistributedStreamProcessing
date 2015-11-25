@@ -14,14 +14,14 @@ public class Tuple implements Serializable{
 	private Map<String,Object> elements;
 	
 	// the fields will be filled by the generating spout/bolt
-	private String 					m_sJobname;
-	private String 					m_sSrcCompName;
-	private int						m_nSrcInstId;
+	public String 					m_sJobname;
+	public String 					m_sSrcCompName;
+	public int						m_nSrcInstId;
 	
 	// these values will be filled in by the NM and used by the
 	// receiving NM to locate the processing component
-	private String 					m_sDestCompName;
-	private int						m_nDestInstId;
+	public String 					m_sDestCompName;
+	public int						m_nDestInstId;
 	
 	// IMPORTANT: Fill in the method if more variables are added to the class
 	public void Copy(Tuple tuple)

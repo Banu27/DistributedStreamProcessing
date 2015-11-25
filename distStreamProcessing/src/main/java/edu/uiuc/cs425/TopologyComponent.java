@@ -3,32 +3,47 @@ package edu.uiuc.cs425;
 public class TopologyComponent {
 	
 	private String 				m_sComponentName;
-	private String				m_sParentName;
-	private String				m_sGroupingType;
+	private String				m_sClassName;
+	private TopologyComponent	m_oParent;
+	private int 				m_nGroupingType;
 	private int					m_nParallelismLevel;
+	private int					m_nCompType;
 	
-	public String getM_sComponentName() {
+	public TopologyComponent(String comp, String className, int compType, TopologyComponent parent, 
+			int type, int parLevel)
+	{
+		m_sComponentName = comp;
+		m_sClassName = className;
+		m_oParent = parent; 
+		m_nGroupingType = type;
+		m_nParallelismLevel = parLevel;
+		m_nCompType = compType;
+	}
+	
+	public int getCompType()
+	{
+		return m_nCompType;
+	}
+	
+	public String getClassName()
+	{
+		return m_sClassName;
+	}
+	
+	public String getComponentName() {
 		return m_sComponentName;
 	}
-	public void setM_sComponentName(String m_sComponentName) {
-		this.m_sComponentName = m_sComponentName;
+	
+	public TopologyComponent getParent() {
+		return m_oParent;
 	}
-	public String getM_sParentName() {
-		return m_sParentName;
+	
+	public int getGroupingType() {
+		return m_nGroupingType;
 	}
-	public void setM_sParentName(String m_sParentName) {
-		this.m_sParentName = m_sParentName;
-	}
-	public String getM_sGroupingType() {
-		return m_sGroupingType;
-	}
-	public void setM_sGroupingType(String m_sGroupingType) {
-		this.m_sGroupingType = m_sGroupingType;
-	}
-	public int getM_nParallelismLevel() {
+	
+	public int getParallelismLevel() {
 		return m_nParallelismLevel;
 	}
-	public void setM_nParallelismLevel(int m_nParallelismLevel) {
-		this.m_nParallelismLevel = m_nParallelismLevel;
-	}
+	
 }
