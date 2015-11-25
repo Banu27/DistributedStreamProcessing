@@ -41,9 +41,9 @@ public class CommandIfaceProxy implements Iface{
 			return Commons.SUCCESS;
 		}
 
-		public void CreateInstance(String classname, String pathToJar) throws TException{
+		public void CreateInstance(String classname, String pathToJar, int i, String topologyName) throws TException{
 			// TODO Auto-generated method stub
-			m_oClient.CreateInstance(classname, pathToJar);
+			m_oClient.CreateInstance(classname, pathToJar, i, topologyName);
 		}
 		
 		public void ReceiveJob(String JobName, ByteBuffer data, String TopologyName, String Filename) throws TException{

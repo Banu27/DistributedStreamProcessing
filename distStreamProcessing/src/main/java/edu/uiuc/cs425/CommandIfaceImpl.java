@@ -24,9 +24,9 @@ public class CommandIfaceImpl implements Iface {
 			//m_oNodeManager.ReceiveJob(JobName, data, TopologyName, Filename);
 		}
 		
-		public void CreateInstance(String classname, String pathToJar) {
+		public void CreateInstance(String classname, String pathToJar, int instanceId, String topologyName) {
 
-			m_oNodeManager.CreateInstance(classname, pathToJar);
+			m_oNodeManager.CreateInstance(classname, pathToJar, instanceId, topologyName);
 		}
 
 

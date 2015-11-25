@@ -1,50 +1,62 @@
 package edu.uiuc.cs425;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-
 import org.apache.thrift.TException;
+import org.apache.zookeeper.KeeperException;
 
 public class ComponentManager implements Runnable{
 
 		
-	private	List<String>									m_lWorkersList;
-	private int												m_nNextAssignableWorker;
-	private HashMap<String, List<TopologyComponent>> 		m_hTopologyList;
-	private Logger											m_oLogger;
-	private int												m_nCommandServicePort;
-	private String											m_sJarFilesDir;
+	private	List<String>								m_lWorkersList;
+	private int											m_nNextAssignableWorker;
+	private HashMap<String, Topology>			 		m_hTopologyList;
+	private Logger										m_oLogger;
+	private int											m_nCommandServicePort;
+	private String										m_sJarFilesDir;
+	private ZooKeeperWrapper							m_oZooKeeperWrapper;
+	private String										m_sZooKeeperConnectionIP;
+	
+	
 	//Methods
 
-	public void Initialize()
+	public void Initialize(String jarFileDir, String ZKConnectionIP, Logger oLogger)
 	{
 		m_nNextAssignableWorker = 0;
-
+		m_oZooKeeperWrapper = new ZooKeeperWrapper();
+		m_sZooKeeperConnectionIP = ZKConnectionIP;
+		m_oLogger = oLogger;
 		//This needs to be assigned	
-		m_sJarFilesDir = null;
+		m_sJarFilesDir = jarFileDir;
+		try {
+			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"), m_sZooKeeperConnectionIP);
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
-	
 	
 	public void AdmitNewWorker(String IP) //(Thrift)
 	{
@@ -70,60 +82,79 @@ public class ComponentManager implements Runnable{
 			return Commons.SUCCESS;
 	}
 	
-	
-
-	public void ReceiveNewJob(String JobName, ByteBuffer file, String TopologyName, String filename)
+	public void ReceiveNewJob(ByteBuffer file, String TopologyName, String filename)
 	{
 		//Client has to give the file here after converting to bytebuffer
 		WriteFileIntoDir(file, filename);
 		String pathToJar = m_sJarFilesDir + '/' + filename;
-		RetrieveTopologyComponents(JobName, pathToJar, TopologyName);
+		RetrieveTopologyComponents(pathToJar, TopologyName);
+		try {
+			m_oZooKeeperWrapper.create(new String("/Topologies/" + TopologyName), new String("topology"), m_sZooKeeperConnectionIP);
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		//Send jars to all the workers.
-		StartComponentsAtNodes(JobName, pathToJar);
+		StartComponentsAtNodes(TopologyName, pathToJar);
 	}
 	
 	
-	void StartComponentsAtNodes(String Jobname, String pathToJar)
+	void StartComponentsAtNodes(String TopologyName, String pathToJar)
 	{
-		List<TopologyComponent> Components = m_hTopologyList.get(Jobname);
+		Topology Components = m_hTopologyList.get(TopologyName);
 		
 		try {
-			URL[] urls = { new URL("jar:file:" + pathToJar+"!/") };
-			URLClassLoader cl = URLClassLoader.newInstance(urls);
+			Set<String> ComponentNames = Components.GetKeys();
+			Iterator<String> iterator = ComponentNames.iterator();
 			
-			Iterator<TopologyComponent> iterator = Components.iterator();
 			while(iterator.hasNext())
 			{
-				TopologyComponent component = iterator.next();
-				String classname = component.getComponentName();
-				Class<?> componentClass = cl.loadClass(classname);
+				String classname = iterator.next();	
+				String ZnodePathForComponent = new String("/Topologies/"+TopologyName+"/"+classname);
+				try {
+					m_oZooKeeperWrapper.create(ZnodePathForComponent,classname,m_sZooKeeperConnectionIP);
+				} catch (IllegalStateException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (KeeperException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				
-				for(int i=0; i<component.getParallelismLevel(); i++)
+				for(int i=0; i< Components.GetParallelismLevel(classname); i++)
 				{
 					//Call the start task at the worker
 					CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();
 					if(Commons.SUCCESS == ProxyTemp.Initialize(m_lWorkersList.get(m_nNextAssignableWorker), m_nCommandServicePort, m_oLogger))
 					{
-						ProxyTemp.CreateInstance(classname, pathToJar);
+						ProxyTemp.CreateInstance(classname, pathToJar, i, TopologyName);
 					}
 					
 				}
 				
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (TException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	private void RetrieveTopologyComponents(String JobName, String pathToJar, String TopologyName)  //(Thrift)
+	private void RetrieveTopologyComponents( String pathToJar, String TopologyName)  //(Thrift)
 	{
 		//Get the topology from the jar. 
 		//Receive the parallelism level
@@ -138,7 +169,7 @@ public class ComponentManager implements Runnable{
 
 			try {
 				Method createTopology = topologyClass.getMethod("CreateTopology");
-				m_hTopologyList.put(JobName, (List<TopologyComponent>) createTopology.invoke(topologyObject));
+				m_hTopologyList.put(TopologyName, (Topology) createTopology.invoke(topologyObject));
 			} catch (NoSuchMethodException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Create Topology method not present. Aborting!!");
@@ -179,10 +210,10 @@ public class ComponentManager implements Runnable{
 		//Calls start task
 	}
 	
-	private long GetMyLocalTime()
-	{
-		return new Date().getTime();
-	}
+//	private long GetMyLocalTime()
+	//{
+	//	return new Date().getTime();
+	//}
 
 
 	public void run() {

@@ -8,7 +8,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 
  
-public class ZooKeeperConnector {
+public class ZooKeeperConnector{
 
 	
 	private ZooKeeper 							m_oZooKeeper;
@@ -30,11 +30,6 @@ public class ZooKeeperConnector {
 		
 		m_oConnectedSignal.await();
 		return m_oZooKeeper;
-	}
-	
-	public void close() throws InterruptedException
-	{
-		
 	}
 	
 }

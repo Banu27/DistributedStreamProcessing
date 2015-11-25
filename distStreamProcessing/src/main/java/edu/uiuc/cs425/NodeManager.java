@@ -24,52 +24,56 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.zookeeper.KeeperException;
 
 public class NodeManager implements Runnable {
 
 	// key: "<JobName>:<Component>:<Instance>" -> Task
-	private HashMap<String, TaskManager> m_hTaskMap;
+	private HashMap<String, TaskManager> 			m_hTaskMap;
 	
 	// key: "<JobName>:<Component>:<Instance>" -> NodeIP
 	// This map will be updated by the watch registered with
 	// the zookeeper
-	private HashMap<String, String> m_hClusterInfo;
+	private HashMap<String, String> 				m_hClusterInfo;
 	
-	private HashMap<String, List<TopologyComponent>> m_hTopologyList;
-	private HashMap<String, ClassAndInstance> m_hComponentInstances;
+	private HashMap<String,Topology> 				m_hTopologyList;
+	private HashMap<String, ClassAndInstance> 		m_hComponentInstances;
 
-	private String m_sJarFilesDir;
-	private String m_sMyIp;
+	private String 									m_sJarFilesDir;
+	private String 									m_sMyIp;
 
 	// list of all the worker currently in the cluster
-	private ArrayList<String> m_lWorkerIPs;
+	private ArrayList<String> 						m_lWorkerIPs;
 
 	// data structure to store the tuples to be transferred to other nodes
 	// a thread will go through them every interval and transfer them to other
 	// nodes. We want to tansfer as a batch
-	private HashMap<String, Queue<Tuple>> m_OutputTuples;
-	private int m_nTransferInterval;
-	private Lock m_oMutexOutputTuple;
+	private HashMap<String, Queue<Tuple>> 			m_OutputTupleBucket;
+	private int	 									m_nTransferInterval;
+	private Lock 									m_oMutexOutputTuple;
 
 	// these are the node level input and output queues. The
 	// handlers and producers for the disruptor are implemented
 	// within the class. Different init methods needs to be called
 	// for each of the disruptor type.
-	private DisruptorWrapper m_oInputTupleQ;
-	private DisruptorWrapper m_oOutputTupleQ;
+	private DisruptorWrapper 						m_oInputTupleQ;
+	private DisruptorWrapper 						m_oOutputTupleQ;
 
 	// hash map for ip to commandinterface proxy. Idea is to cache the
 	// proxies and not to recreate them every time
-	private HashMap<String, CommandIfaceProxy> m_hIPtoProxy;
+	private HashMap<String, CommandIfaceProxy> 		m_hIPtoProxy;
 
-	private Logger m_oLogger;
-	private ConfigAccessor m_oConfig;
+	private Logger 									m_oLogger;
+	private ConfigAccessor 							m_oConfig;
+	private ZooKeeperWrapper						m_oZooKeepeer;
+	private String									m_sZooKeeperConnectionIP;
 
 	public NodeManager() {
 		m_hTaskMap 					= new HashMap<String, TaskManager>();
 		m_hClusterInfo 				= new HashMap<String, String>();
-		m_hTopologyList 			= new HashMap<String, List<TopologyComponent>>();
+		m_hTopologyList 			= new HashMap<String, Topology>();
 		m_hComponentInstances 		= new HashMap<String, ClassAndInstance>();
+		m_oZooKeepeer				= new ZooKeeperWrapper();
 		m_oMutexOutputTuple 		= new ReentrantLock(true);
 		try {
 			m_sMyIp = InetAddress.getLocalHost().getHostAddress();
@@ -79,12 +83,13 @@ public class NodeManager implements Runnable {
 		m_lWorkerIPs = new ArrayList<String>();
 	}
 
-	public void Initialize(Logger logger, ConfigAccessor config) {
+	public void Initialize(Logger logger, ConfigAccessor config, String ZKConnectionIP) {
 		m_oInputTupleQ.InitNodeInput(this);
 		m_oOutputTupleQ.InitNodeOutput(this);
 		m_oLogger = logger;
 		m_oConfig = config;
 		m_sJarFilesDir = m_oConfig.JarPath();
+		m_sZooKeeperConnectionIP = ZKConnectionIP;
 	}
 
 	private int WriteFileIntoDir(ByteBuffer file, String filename) {
@@ -112,7 +117,7 @@ public class NodeManager implements Runnable {
 		// Send jars to all the workers.
 	}
 
-	public void CreateInstance(String classname, String pathToJar) {
+	public void CreateInstance(String classname, String pathToJar, int instanceId, String TopologyName) {
 		try {
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
@@ -124,7 +129,15 @@ public class NodeManager implements Runnable {
 			ClassAndInstance classAndInstance = new ClassAndInstance();
 			classAndInstance.setM_cClass(componentClass);
 			classAndInstance.setM_oClassObject(componentInstance);
-			m_hComponentInstances.put(classname, classAndInstance);
+			classAndInstance.setM_nInstanceId(instanceId);
+			
+			//Is the next line needed?
+			String instanceName = classname + String.valueOf(instanceId);
+			m_hComponentInstances.put(instanceName, classAndInstance);
+			
+			String pathToZnodeInstance = new String("/Topologies/"+TopologyName+"/"+classname+"/"+instanceName);
+			m_oZooKeepeer.create(pathToZnodeInstance, instanceName, m_sZooKeeperConnectionIP);
+			
 
 		} catch (ClassNotFoundException e1) {
 			// TODO Auto-generated catch block
@@ -136,6 +149,18 @@ public class NodeManager implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -176,7 +201,7 @@ public class NodeManager implements Runnable {
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
-			m_hTopologyList.put(topologyName, (List<TopologyComponent>) createTopology.invoke(topologyObject));
+			m_hTopologyList.put(topologyName, (Topology) createTopology.invoke(topologyObject));
 
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
@@ -243,10 +268,10 @@ public class NodeManager implements Runnable {
 		for (int i = 0; i < tuples.size(); ++i) {
 			String sIP = GetNextNode(tuples.get(i));
 			if(sIP == null) continue;
-			Queue<Tuple> queue = m_OutputTuples.get(sIP);
+			Queue<Tuple> queue = m_OutputTupleBucket.get(sIP);
 			if (queue == null)
-				m_OutputTuples.put(sIP, new LinkedList<Tuple>());
-			queue = m_OutputTuples.get(sIP);
+				m_OutputTupleBucket.put(sIP, new LinkedList<Tuple>());
+			queue = m_OutputTupleBucket.get(sIP);
 			queue.add(tuple);
 		}
 		m_oMutexOutputTuple.unlock();
@@ -293,11 +318,11 @@ public class NodeManager implements Runnable {
 			m_oMutexOutputTuple.lock();
 
 			// get the keys
-			Set<String> sIPs = m_OutputTuples.keySet();
+			Set<String> sIPs = m_OutputTupleBucket.keySet();
 			// iterate through the keysq
 			for (String sIP : sIPs) {
 				// send list of tuples to the other node
-				Queue<Tuple> queue = m_OutputTuples.get(sIP);
+				Queue<Tuple> queue = m_OutputTupleBucket.get(sIP);
 				List<ByteBuffer> serTuples = new ArrayList<ByteBuffer>();
 				while (queue.size() > 0) {
 					serTuples.add(ByteBuffer.wrap(queue.peek().Serialize()));
