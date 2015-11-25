@@ -19,6 +19,4 @@ public class ClassAndInstance {
 		this.m_cClass = m_cClass;
 	}
 	
-	
-
 }
