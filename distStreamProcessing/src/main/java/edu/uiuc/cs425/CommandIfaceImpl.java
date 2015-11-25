@@ -1,6 +1,7 @@
 package edu.uiuc.cs425;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import org.apache.thrift.TException;
 
@@ -26,5 +27,10 @@ public class CommandIfaceImpl implements Iface {
 		public void CreateInstance(String classname, String pathToJar) {
 
 			m_oNodeManager.CreateInstance(classname, pathToJar);
+		}
+
+		public void SendTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
+			// TODO Auto-generated method stub
+			
 		}
 }

@@ -49,6 +49,11 @@ public class CommandIfaceProxy implements Iface{
 		public void ReceiveJob(String JobName, ByteBuffer data, String TopologyName, String Filename) throws TException{
 			m_oClient.ReceiveJob(JobName, data, TopologyName, Filename);
 		}
+
+		public void SendTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
+			// TODO Auto-generated method stub
+			
+		}
 			
 		
 

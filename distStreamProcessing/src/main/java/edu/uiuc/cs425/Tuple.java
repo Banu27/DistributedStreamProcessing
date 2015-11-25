@@ -13,10 +13,45 @@ public class Tuple implements Serializable{
 	private static final long serialVersionUID = 1L;
 	private Map<String,Object> elements;
 	
+	// the fields will be filled by the generating spout/bolt
+	private String 					m_sJobname;
+	private String 					m_sSrcCompName;
+	private int						m_nSrcInstId;
+	
+	// these values will be filled in by the NM and used by the
+	// receiving NM to locate the processing component
+	private String 					m_sDestCompName;
+	private int						m_nDestInstId;
+	
+	// IMPORTANT: Fill in the method if more variables are added to the class
+	public void Copy(Tuple tuple)
+	{
+		tuple.elements 			= elements;
+		tuple.m_sJobname 		= m_sJobname;
+		tuple.m_sSrcCompName 	= m_sSrcCompName;
+		tuple.m_nSrcInstId 		= m_nSrcInstId;
+		tuple.m_sDestCompName	= m_sDestCompName;
+		tuple.m_nDestInstId		= m_nDestInstId;
+	}
+	
+	
 	
 	public Tuple()
 	{
-		elements = new HashMap<String, Object>();
+		elements 		= new HashMap<String, Object>();		
+	}
+	
+	public void SetSrcFieldInfo(String jobName, String comp, int instId)
+	{
+		m_sJobname 		= jobName;
+		m_sSrcCompName 	= comp;
+		m_nSrcInstId 	= instId;
+	}
+	
+	public void SetDestinationFields(String comp, int inst)
+	{
+		m_sDestCompName 	= comp;
+		m_nDestInstId 		= inst;
 	}
 	
 	public void AddElement(String key, int value)

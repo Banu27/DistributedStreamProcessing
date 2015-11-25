@@ -2,14 +2,14 @@ package edu.uiuc.cs425;
 
 public class TaskManager implements Runnable {
 
-	private String 					m_sJobname;
-	private String 					m_sComponentName;
-	private int						m_nInstanceId;
+	public String 					m_sJobname;
+	public String 					m_sComponentName;
+	public int						m_nInstanceId;
 	private IBolt 					m_oBolt;
 	private ISpout 					m_oSpout;
 	private NodeManager				m_oNM;
 	private Thread					m_SpoutThread;
-	private DisruptorBoltWrapper    m_oDisruptor;
+	private DisruptorWrapper    m_oDisruptor;
 	
 	public TaskManager()
 	{
@@ -23,8 +23,8 @@ public class TaskManager implements Runnable {
 		m_nInstanceId			= id;
 		m_oBolt					= obj;
 		m_oNM					= oNM;
-		m_oDisruptor = new DisruptorBoltWrapper(2048, m_oBolt);
-		m_oDisruptor.Init();
+		m_oDisruptor = new DisruptorWrapper(2048);
+		m_oDisruptor.InitBolt(m_oBolt);
 	}
 	
 	public void Init(String jobName, String compName, int id, ISpout obj, NodeManager oNM)
