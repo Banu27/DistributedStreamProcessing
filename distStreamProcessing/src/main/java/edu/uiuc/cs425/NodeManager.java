@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -25,8 +26,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.proto.GetChildren2Request;
 
-public class NodeManager implements Runnable {
+public class NodeManager implements Runnable{
 
 	// key: "<JobName>:<Component>:<Instance>" -> Task
 	private HashMap<String, TaskManager> 			m_hTaskMap;
@@ -34,7 +38,7 @@ public class NodeManager implements Runnable {
 	// key: "<JobName>:<Component>:<Instance>" -> NodeIP
 	// This map will be updated by the watch registered with
 	// the zookeeper
-	private HashMap<String, String> 				m_hClusterInfo;
+	private HashMap<String,String> 				m_hClusterInfo;
 	
 	private HashMap<String,Topology> 				m_hTopologyList;
 	private HashMap<String, ClassAndInstance> 		m_hComponentInstances;
@@ -67,6 +71,7 @@ public class NodeManager implements Runnable {
 	private ConfigAccessor 							m_oConfig;
 	private ZooKeeperWrapper						m_oZooKeepeer;
 	private String									m_sZooKeeperConnectionIP;
+	private String									m_sNodeIP;
 
 	public NodeManager() {
 		m_hTaskMap 					= new HashMap<String, TaskManager>();
@@ -74,6 +79,7 @@ public class NodeManager implements Runnable {
 		m_hTopologyList 			= new HashMap<String, Topology>();
 		m_hComponentInstances 		= new HashMap<String, ClassAndInstance>();
 		m_oZooKeepeer				= new ZooKeeperWrapper();
+		m_oZooKeepeer.Initialize(m_sZooKeeperConnectionIP);
 		m_oMutexOutputTuple 		= new ReentrantLock(true);
 		try {
 			m_sMyIp = InetAddress.getLocalHost().getHostAddress();
@@ -83,13 +89,14 @@ public class NodeManager implements Runnable {
 		m_lWorkerIPs = new ArrayList<String>();
 	}
 
-	public void Initialize(Logger logger, ConfigAccessor config, String ZKConnectionIP) {
+	public void Initialize(Logger logger, ConfigAccessor config, String ZKConnectionIP, String NodeIP) {
 		m_oInputTupleQ.InitNodeInput(this);
 		m_oOutputTupleQ.InitNodeOutput(this);
 		m_oLogger = logger;
 		m_oConfig = config;
 		m_sJarFilesDir = m_oConfig.JarPath();
 		m_sZooKeeperConnectionIP = ZKConnectionIP;
+		m_sNodeIP = NodeIP;
 	}
 
 	private int WriteFileIntoDir(ByteBuffer file, String filename) {
@@ -109,6 +116,47 @@ public class NodeManager implements Runnable {
 		return Commons.SUCCESS;
 	}
 
+	public void UpdateClusterInfo()
+	{
+		// key: "<JobName>:<Component>:<Instance>" -> NodeIP
+		// This map will be updated by the watch registered with
+		// the zookeeper
+		
+		String zNodePath = "/";
+		
+		RecursiveGetChildren(zNodePath);
+
+	}
+	
+	private void RecursiveGetChildren(String zNodePath)
+	{
+		if(m_oZooKeepeer.GetChildren(zNodePath).isEmpty())
+		{
+			try {
+				try {
+					m_hClusterInfo.put(zNodePath, m_oZooKeepeer.read(zNodePath));
+				} catch (UnsupportedEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} catch (KeeperException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return;
+		}
+		
+		for(String child : m_oZooKeepeer.GetChildren(zNodePath))
+		{
+			RecursiveGetChildren(zNodePath + "/" + child);
+		}
+		
+	}
+	
+	
 	public void ReceiveTopology(ByteBuffer jar, String topologyName) 
 	{
 		String pathToJar = m_sJarFilesDir + '/' + topologyName;
@@ -136,7 +184,10 @@ public class NodeManager implements Runnable {
 			m_hComponentInstances.put(instanceName, classAndInstance);
 			
 			String pathToZnodeInstance = new String("/Topologies/"+TopologyName+"/"+classname+"/"+instanceName);
-			m_oZooKeepeer.create(pathToZnodeInstance, instanceName, m_sZooKeeperConnectionIP);
+			m_oZooKeepeer.create(pathToZnodeInstance,m_sNodeIP);
+			
+			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
+			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			
 
 		} catch (ClassNotFoundException e1) {

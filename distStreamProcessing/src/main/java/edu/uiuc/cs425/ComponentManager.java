@@ -42,7 +42,7 @@ public class ComponentManager implements Runnable{
 		//This needs to be assigned	
 		m_sJarFilesDir = jarFileDir;
 		try {
-			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"), m_sZooKeeperConnectionIP);
+			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"));
 		} catch (IllegalStateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -89,7 +89,7 @@ public class ComponentManager implements Runnable{
 		String pathToJar = m_sJarFilesDir + '/' + filename;
 		RetrieveTopologyComponents(pathToJar, TopologyName);
 		try {
-			m_oZooKeeperWrapper.create(new String("/Topologies/" + TopologyName), new String("topology"), m_sZooKeeperConnectionIP);
+			m_oZooKeeperWrapper.create(new String("/Topologies/" + TopologyName), new String("topology"));
 		} catch (IllegalStateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -121,7 +121,7 @@ public class ComponentManager implements Runnable{
 				String classname = iterator.next();	
 				String ZnodePathForComponent = new String("/Topologies/"+TopologyName+"/"+classname);
 				try {
-					m_oZooKeeperWrapper.create(ZnodePathForComponent,classname,m_sZooKeeperConnectionIP);
+					m_oZooKeeperWrapper.create(ZnodePathForComponent,classname);
 				} catch (IllegalStateException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
