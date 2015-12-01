@@ -14,7 +14,6 @@ import java.io.IOException;
 /*
  <MembershipConfig>
    <Introducer nodeID="0" ip="10.16.8.85" port="9090" />
-   <Heartbeat port="8192" interval="2000" gossipNodes="3" /> 
    <Failure interval="3000" checkPoint="" />
    <Logger path="" />
    <Topologies jarPath="" />
@@ -24,9 +23,6 @@ import java.io.IOException;
 public class ConfigAccessor {
 	private String 		m_sIntroducerIP;
 	private int 		m_nIntroducerPort;
-	private int         m_nHeartBeatInterval;
-	private int         m_nGossipNodes;
-	private int         m_nHeartBeatPort;
 	private int 		m_nFailureInterval;
 	private String      m_sLogPath;
 	private String      m_sCPPath;
@@ -62,20 +58,7 @@ public class ConfigAccessor {
 		return m_nLossRate;
 	}
 	
-	public int         HeartBeatInterval()
-	{
-		return m_nHeartBeatInterval;
-	}
-	
-	public int         GossipNodes()
-	{
-		return m_nGossipNodes;
-	}
-	
-	public int         HeartBeatPort()
-	{
-		return m_nHeartBeatPort;
-	}
+
 	
 	public int 		FailureInterval()
 	{
@@ -124,14 +107,7 @@ public class ConfigAccessor {
 				m_sIntroducerIP  = eElement.getAttribute("ip");
 				m_nIntroducerPort = Integer.parseInt(eElement.getAttribute("port"));
 
-			} else if(nNode.getNodeName() == "Heartbeat")
-			{
-				Element eElement = (Element) nNode;
-				m_nHeartBeatPort  = Integer.parseInt(eElement.getAttribute("port"));
-				m_nHeartBeatInterval = Integer.parseInt(eElement.getAttribute("interval"));
-				m_nGossipNodes = Integer.parseInt(eElement.getAttribute("gossipNodes"));
-				
-			} else if(nNode.getNodeName() == "Failure")
+			}  else if(nNode.getNodeName() == "Failure")
 			{
 				Element eElement = (Element) nNode;
 				m_nFailureInterval  = Integer.parseInt(eElement.getAttribute("interval"));

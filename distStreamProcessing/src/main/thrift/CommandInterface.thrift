@@ -8,4 +8,6 @@ service CommandInterface{
 	
 	# this is called from NM to NM to transfer tuples
 	void TransferTupleToNode(1:i32 nTuples, list<binary> tuples);
+	
+	bool isAlive();
 }

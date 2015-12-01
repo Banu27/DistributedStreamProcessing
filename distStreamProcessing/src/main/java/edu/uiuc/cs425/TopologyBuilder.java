@@ -26,13 +26,13 @@ public  class TopologyBuilder {
 	}
 	
 	int setBolt(String boltName, String className, String parentName, int groupingType, 
-			int parallelismLevel)
+			String sGroupField, int parallelismLevel)
 	{
 		//check if parent is there, else return false
 		if( !topology.isAvailable(parentName)) return Commons.FAILURE;
 		
 		TopologyComponent component = new TopologyComponent(boltName, className, Commons.BOLT,
-				topology.Get(parentName), groupingType, parallelismLevel);
+				topology.Get(parentName), groupingType, sGroupField, parallelismLevel);
 		topology.Add(component);
 		return Commons.SUCCESS;
 	}
@@ -41,7 +41,7 @@ public  class TopologyBuilder {
 		if(spout) return Commons.FAILURE;
 		spout = true;
 		TopologyComponent component = new TopologyComponent(spoutName, className, Commons.SPOUT,
-				null, -1, parallelismLevel);
+				null, -1, null,parallelismLevel);
 		topology.Add(component);
 		return Commons.SUCCESS;
 	}

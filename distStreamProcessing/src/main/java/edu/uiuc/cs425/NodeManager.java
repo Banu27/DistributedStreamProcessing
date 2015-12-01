@@ -285,12 +285,59 @@ public class NodeManager implements Runnable{
 
 	// code to identify the next component
 	ArrayList<Tuple> IdentifyNextComponents(Tuple tuple) {
-		// look at the topology and if there are n components
-		// the tuple needs to go to then create a ArrayList of size
-		// n and all the input tuple and (n-1) other new tuples to
-		// the array.
-		ArrayList<Tuple> arrayList = null;
-		return arrayList;
+		
+		ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+		// get the source component
+		String sSrc = tuple.m_sSrcCompName;
+		// get the next comp list
+		Topology topo = m_hTopologyList.get(tuple.m_sJobname);
+		ArrayList<String> nextComp = topo.GetNextComponents(sSrc);
+		if(nextComp.size() > 0)
+		{
+			// assign dest to the first tuple
+			String firtComp = nextComp.get(0);
+			int destGrouping = topo.Get(firtComp).getGroupingType();
+			int inst = 0;
+			if( destGrouping == Commons.GROUPING_FIELD)
+			{
+				String sFieldType = topo.Get(firtComp).getFieldGroup();
+				String sFieldValue = tuple.GetStringValue(sFieldType);
+				int hash = Commons.Hash(sFieldValue);
+				inst = hash%topo.Get(firtComp).getParallelismLevel();
+				
+			} else {
+				inst = (int) (topo.Get(firtComp).nextTupleIndex() % 
+						topo.Get(firtComp).getParallelismLevel());
+			}
+			tuple.m_nDestInstId = inst;
+			tuple.m_sDestCompName = firtComp;
+			tuples.add(tuple);
+			// now go through the rest of the next comp
+			for(int i = 1; i < nextComp.size(); ++i)
+			{
+				Tuple newTuple = new Tuple();
+				tuple.Copy(newTuple);
+				String nextCompName = nextComp.get(i);
+				destGrouping = topo.Get(nextCompName).getGroupingType();
+				inst = 0;
+				if( destGrouping == Commons.GROUPING_FIELD)
+				{
+					String sFieldType = topo.Get(nextCompName).getFieldGroup();
+					String sFieldValue = tuple.GetStringValue(sFieldType);
+					int hash = Commons.Hash(sFieldValue);
+					inst = hash%topo.Get(nextCompName).getParallelismLevel();
+					
+				} else {
+					inst = (int) (topo.Get(nextCompName).nextTupleIndex() % 
+							topo.Get(nextCompName).getParallelismLevel());
+				}
+				tuple.m_nDestInstId = inst;
+				tuple.m_sDestCompName = nextCompName;
+				tuples.add(tuple);
+			}
+		}
+		
+		return tuples;
 	}
 
 	public String GetNextNode(Tuple tuple) {

@@ -48,6 +48,15 @@ public class Commons {
 	    return res;
 	}
 	
+	public static int Hash(String str)
+	{
+		int hash = 7;
+		for (int i = 0; i < str.length(); i++) {
+		    hash = hash*31 + str.charAt(i);
+		}
+		return hash;
+	}
+	
 	
 	public static void SystemCommand(String[] command) {
 		

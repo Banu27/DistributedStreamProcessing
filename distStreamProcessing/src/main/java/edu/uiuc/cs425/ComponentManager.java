@@ -10,11 +10,16 @@ import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.thrift.TException;
 import org.apache.zookeeper.KeeperException;
 
@@ -22,6 +27,9 @@ public class ComponentManager implements Runnable{
 
 		
 	private	List<String>								m_lWorkersList;
+	private HashMap<String, CommandIfaceProxy>          m_hProxyCache;
+	Lock												m_WorkerListLock;
+	
 	private int											m_nNextAssignableWorker;
 	private HashMap<String, Topology>			 		m_hTopologyList;
 	private Logger										m_oLogger;
@@ -29,12 +37,20 @@ public class ComponentManager implements Runnable{
 	private String										m_sJarFilesDir;
 	private ZooKeeperWrapper							m_oZooKeeperWrapper;
 	private String										m_sZooKeeperConnectionIP;
-	
+	private ConfigAccessor								m_oConfig;
 	
 	//Methods
 
-	public void Initialize(String jarFileDir, String ZKConnectionIP, Logger oLogger)
+	public ComponentManager()
 	{
+		m_lWorkersList   = new ArrayList<String>();
+		m_WorkerListLock = new ReentrantLock();
+		m_hProxyCache    = new HashMap<String, CommandIfaceProxy>();
+	}
+	
+	public void Initialize(String jarFileDir, String ZKConnectionIP, Logger oLogger, ConfigAccessor oConfig)
+	{
+		m_oConfig = oConfig;
 		m_nNextAssignableWorker = 0;
 		m_oZooKeeperWrapper = new ZooKeeperWrapper();
 		m_sZooKeeperConnectionIP = ZKConnectionIP;
@@ -216,9 +232,43 @@ public class ComponentManager implements Runnable{
 	//}
 
 
-	public void run() {
-		// TODO Auto-generated method stub
+	private void ReSched(String sIP)
+	{
 		
+		// remove from zookeeper
+		// resched all the components from the failed node to the new node
+	}
+	
+	private void CheckIfWorkersAreAlive()
+	{
+		ListIterator<String> iter = m_lWorkersList.listIterator();
+		while(iter.hasNext())
+		{
+			String sIP = iter.next();
+			// make is alive call
+			if(m_hProxyCache.containsKey(sIP))
+			{
+				if(! m_hProxyCache.get(sIP).isAlive())
+				{
+					// remove entries from worklist and cache
+					iter.remove();
+					m_hProxyCache.remove(sIP);
+					ReSched(sIP);
+				}
+			}
+			// if false do rescheduling
+		}
+	}
+	
+	public void run() {
+		
+		
+		CheckIfWorkersAreAlive();
+		try {
+			Thread.sleep(m_oConfig.FailureInterval());
+		} catch (InterruptedException e1) {
+
+		}
 	}
 	
 }

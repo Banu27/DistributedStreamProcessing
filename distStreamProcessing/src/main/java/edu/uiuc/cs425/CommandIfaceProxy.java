@@ -55,6 +55,14 @@ public class CommandIfaceProxy implements Iface{
 			
 		}
 
+		public boolean isAlive() {
+			try {
+				return m_oClient.isAlive();
+			} catch (TException e) {
+				return false;
+			}
+		}
+
 		
 			
 		

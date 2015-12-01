@@ -34,4 +34,9 @@ public class CommandIfaceImpl implements Iface {
 			// TODO Auto-generated method stub
 			
 		}
+
+		public boolean isAlive() throws TException {
+			// TODO Auto-generated method stub
+			return true;
+		}
 }
