@@ -21,7 +21,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.thrift.TException;
+import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.KeeperException.Code;
+import org.apache.zookeeper.WatchedEvent;
 
 public class ComponentManager implements Runnable{
 
@@ -59,6 +64,7 @@ public class ComponentManager implements Runnable{
 		m_sJarFilesDir = jarFileDir;
 		try {
 			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"));
+			m_oZooKeeperWrapper.create(new String("/Workers"), new String("Consists of all workers"));
 		} catch (IllegalStateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -76,9 +82,108 @@ public class ComponentManager implements Runnable{
 	
 	public void AdmitNewWorker(String IP) //(Thrift)
 	{
-		//m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())));
+		//m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())))
 		m_lWorkersList.add(IP);
+		
+		//Zookeeper update with new worker
+		try {
+			m_oZooKeeperWrapper.create(new String("/Workers/"+IP),IP);
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
+	
+	
+	public int getWorkersSize()
+	{
+		if(m_lWorkersList.isEmpty()) {
+			return 0;
+		} else {
+			return m_lWorkersList.size();
+		}
+	}
+
+	Watcher workersChangeWatcher = new Watcher() 
+	{
+		public void process(WatchedEvent e) {
+			if(e.getType() == EventType.NodeChildrenChanged) {
+				assert "/workers".equals( e.getPath() );
+
+				getWorkers();
+			}
+		}
+	};
+
+	void getWorkers()
+	{
+		m_oZooKeeperWrapper.getChildren("/workers", 
+				workersChangeWatcher, 
+				workersGetChildrenCallback, 
+				null);
+	}
+
+	ChildrenCallback workersGetChildrenCallback = new ChildrenCallback() 
+	{
+		public void processResult(int rc, String path, Object ctx, List<String> children){
+			switch (Code.get(rc)) { 
+			case CONNECTIONLOSS:
+				getWorkers();
+				break;
+			case OK:
+				m_oLogger.Info("Succesfully got a list of workers: " 
+						+ children.size() 
+						+ " workers");
+				reassignAndSet(children);
+				break;
+			default:
+				m_oLogger.Error("getChildren failed" + path);
+			}
+		}
+	};
+
+
+	void reassignAndSet(List<String> children)
+	{
+		List<String> toProcess;
+
+		if(m_lWorkersList.isEmpty()) 
+		{
+			m_lWorkersList = children;
+			toProcess = null;
+		} 
+
+		else 
+		{
+			m_oLogger.Info( "Removing existing workers and resetting" );
+			m_lWorkersList.clear();
+			for(String worker : children)
+			{
+				m_lWorkersList.add(worker);
+			}
+			toProcess = m_lWorkersList;
+		}
+
+		if(toProcess != null) {
+
+			ReassignAbsentWorkerTasks();
+		}
+	}
+
+	private void ReassignAbsentWorkerTasks() {
+		// TODO Auto-generated method stub
+
+	}
+
 	
 	public int WriteFileIntoDir(ByteBuffer file, String filename)
 	{

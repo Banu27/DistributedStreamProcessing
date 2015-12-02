@@ -1,6 +1,7 @@
 package edu.uiuc.cs425;
 
 import java.io.File;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -23,12 +24,19 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.lang3.SerializationUtils;
+
+import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
+import org.apache.zookeeper.AsyncCallback.DataCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetChildren2Request;
+import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
+import org.apache.zookeeper.KeeperException.Code;
+import org.apache.zookeeper.WatchedEvent;
 
 public class NodeManager implements Runnable{
 
@@ -221,7 +229,48 @@ public class NodeManager implements Runnable{
 		// createTopology.invoke(topologyObject));
 
 	}
+	
+	//For change of any component instance or addition of new instance
+	Watcher TopologyComponentsChangeWatcher = new Watcher(){ 
+	    public void process(WatchedEvent e) {
+	        if(e.getType() == EventType.NodeChildrenChanged) {
+	            assert "/tasks".equals( e.getPath() );
 
+	            getTasks();
+	        }
+	    }
+	};
+
+	void getTasks() 
+	{
+	    m_oZooKeepeer.getChildren("/tasks",
+	                   TopologyComponentsChangeWatcher,
+	                   TopologyGetChildrenCallback,
+	                   null); 
+	}
+
+	ChildrenCallback TopologyGetChildrenCallback = new ChildrenCallback() 
+	{
+	    public void processResult(int rc, String path, Object ctx, List<String> children) 
+	    {
+	        switch(Code.get(rc)) {
+	        case CONNECTIONLOSS:
+	            getTasks();
+
+	            break;
+	        case OK:
+	            if(children != null) {
+	                UpdateClusterInfo(); 
+	            }
+
+	            break;
+	        default:
+	            m_oLogger.Error("getChildren failed." + path);
+	        }
+	    }
+	};
+
+	
 	// this call is made from the task manager after a new tuple is emitted.
 	// the task ref is here in case we need it to get some other information
 	public void ReceiveProcessedTuple(Tuple tuple, TaskManager task) {

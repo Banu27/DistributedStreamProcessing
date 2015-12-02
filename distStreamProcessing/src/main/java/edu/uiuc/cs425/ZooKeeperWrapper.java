@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
+import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
+import org.apache.zookeeper.AsyncCallback.DataCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -76,6 +78,23 @@ public class ZooKeeperWrapper {
 		//Ephemeral znode  - temporary
 		m_oZooKeeper.create(path, dataByte, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		
+	}
+
+	public void getChildren(String zNodePath, Watcher workersChangeWatcher, ChildrenCallback workersGetChildrenCallback,
+			Object object) {
+		// TODO Auto-generated method stub
+		m_oZooKeeper.getChildren(zNodePath, workersChangeWatcher, workersGetChildrenCallback, object);
+		
+	}
+
+	public void getChildren(String zNodePath, boolean b, ChildrenCallback workerAssignmentCallback, Object object) {
+		// TODO Auto-generated method stub
+		m_oZooKeeper.getChildren(zNodePath, b, workerAssignmentCallback, object);
+	}
+
+	public void getData(String string, boolean b, DataCallback taskDataCallback, String task) {
+		// TODO Auto-generated method stub
+		m_oZooKeeper.getData("/tasks/" + task, false, taskDataCallback, task);
 	}
 }
 	
