@@ -234,7 +234,7 @@ public class NodeManager implements Runnable{
 	Watcher TopologyComponentsChangeWatcher = new Watcher(){ 
 	    public void process(WatchedEvent e) {
 	        if(e.getType() == EventType.NodeChildrenChanged) {
-	            assert "/tasks".equals( e.getPath() );
+	            assert "/Topologies".equals( e.getPath() );
 
 	            getTasks();
 	        }
@@ -243,7 +243,7 @@ public class NodeManager implements Runnable{
 
 	void getTasks() 
 	{
-	    m_oZooKeepeer.getChildren("/tasks",
+	    m_oZooKeepeer.getChildren("/Topologies",
 	                   TopologyComponentsChangeWatcher,
 	                   TopologyGetChildrenCallback,
 	                   null); 
