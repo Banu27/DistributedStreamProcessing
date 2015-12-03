@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.thrift.TException;
 import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
+import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -53,18 +54,46 @@ public class ComponentManager implements Runnable{
 		m_hProxyCache    = new HashMap<String, CommandIfaceProxy>();
 	}
 	
-	public void Initialize(String jarFileDir, String ZKConnectionIP, Logger oLogger, ConfigAccessor oConfig)
+	public void Initialize(String ZKConnectionIP, Logger oLogger)
+	{
+		m_oZooKeeperWrapper = new ZooKeeperWrapper();
+		m_sZooKeeperConnectionIP = ZKConnectionIP;
+		m_oLogger = oLogger;
+		m_oZooKeeperWrapper.Initialize(m_sZooKeeperConnectionIP, m_oLogger);
+		
+		try {
+			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"),createNodeCallback);
+			m_oZooKeeperWrapper.create(new String("/Workers"), new String("Consists of all workers"),createNodeCallback);
+			m_oZooKeeperWrapper.getChildren("/Workers", workersChangeWatcher, workersGetChildrenCallback, null);
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void Initialize(String jarFileDir, String ZKConnectionIP, Logger oLogger, ConfigAccessor oConfig, ZooKeeperWrapper oZooKeeper)
 	{
 		m_oConfig = oConfig;
 		m_nNextAssignableWorker = 0;
-		m_oZooKeeperWrapper = new ZooKeeperWrapper();
 		m_sZooKeeperConnectionIP = ZKConnectionIP;
+		m_oZooKeeperWrapper = oZooKeeper;
 		m_oLogger = oLogger;
 		//This needs to be assigned	
 		m_sJarFilesDir = jarFileDir;
 		try {
-			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"));
-			m_oZooKeeperWrapper.create(new String("/Workers"), new String("Consists of all workers"));
+			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"),createNodeCallback);
+			m_oZooKeeperWrapper.create(new String("/Workers"), new String("Consists of all workers"),createNodeCallback);
+			m_oZooKeeperWrapper.getChildren("/Workers", workersChangeWatcher, workersGetChildrenCallback, null);
 		} catch (IllegalStateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -87,7 +116,7 @@ public class ComponentManager implements Runnable{
 		
 		//Zookeeper update with new worker
 		try {
-			m_oZooKeeperWrapper.create(new String("/Workers/"+IP),IP);
+			m_oZooKeeperWrapper.create(new String("/Workers/"+IP),IP,createNodeCallback);
 		} catch (IllegalStateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -103,6 +132,31 @@ public class ComponentManager implements Runnable{
 		}
 	}
 	
+	StringCallback createNodeCallback = new StringCallback() {
+        public void processResult(int rc, String path, Object ctx, String name) {
+            switch (Code.get(rc)) { 
+            case CONNECTIONLOSS:
+                /*
+                 * Try again. Note that registering again is not a problem.
+                 * If the znode has already been created, then we get a 
+                 * NODEEXISTS event back.
+                 */
+                //createParent(path, (byte[]) ctx);
+                //MIGHT NEED TO FILL THIS
+                break;
+            case OK:
+                m_oLogger.Info("Created node");
+                
+                break;
+            case NODEEXISTS:
+                m_oLogger.Warning("ZNode already registered: " + path);
+                
+                break;
+            default:
+                m_oLogger.Error("Something went wrong: " + path);
+            }
+        }
+    };
 	
 	public int getWorkersSize()
 	{
@@ -117,8 +171,8 @@ public class ComponentManager implements Runnable{
 	{
 		public void process(WatchedEvent e) {
 			if(e.getType() == EventType.NodeChildrenChanged) {
-				assert "/workers".equals( e.getPath() );
-
+				m_oLogger.Info("Evenet Path is : " + e.getPath());
+				assert "/Workers".equals( e.getPath() );
 				getWorkers();
 			}
 		}
@@ -126,7 +180,7 @@ public class ComponentManager implements Runnable{
 
 	void getWorkers()
 	{
-		m_oZooKeeperWrapper.getChildren("/workers", 
+		m_oZooKeeperWrapper.getChildren("/Workers", 
 				workersChangeWatcher, 
 				workersGetChildrenCallback, 
 				null);
@@ -169,8 +223,10 @@ public class ComponentManager implements Runnable{
 			for(String worker : children)
 			{
 				m_lWorkersList.add(worker);
+				m_oLogger.Info("Added child : " + worker);
 			}
 			toProcess = m_lWorkersList;
+			
 		}
 
 		if(toProcess != null) {
@@ -183,7 +239,6 @@ public class ComponentManager implements Runnable{
 		// TODO Auto-generated method stub
 
 	}
-
 	
 	public int WriteFileIntoDir(ByteBuffer file, String filename)
 	{
@@ -209,21 +264,6 @@ public class ComponentManager implements Runnable{
 		WriteFileIntoDir(file, filename);
 		String pathToJar = m_sJarFilesDir + '/' + filename;
 		RetrieveTopologyComponents(pathToJar, TopologyName);
-		try {
-			m_oZooKeeperWrapper.create(new String("/Topologies/" + TopologyName), new String("topology"));
-		} catch (IllegalStateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		//Send jars to all the workers.
 		StartComponentsAtNodes(TopologyName, pathToJar);
 	}
@@ -240,23 +280,6 @@ public class ComponentManager implements Runnable{
 			while(iterator.hasNext())
 			{
 				String classname = iterator.next();	
-				String ZnodePathForComponent = new String("/Topologies/"+TopologyName+"/"+classname);
-				try {
-					m_oZooKeeperWrapper.create(ZnodePathForComponent,classname);
-				} catch (IllegalStateException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (KeeperException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
 				for(int i=0; i< Components.GetParallelismLevel(classname); i++)
 				{
 					//Call the start task at the worker
@@ -288,26 +311,26 @@ public class ComponentManager implements Runnable{
 			Class<?> topologyClass = cl.loadClass(TopologyName);
 			Object topologyObject = topologyClass.newInstance();
 
-			try {
-				Method createTopology = topologyClass.getMethod("CreateTopology");
-				m_hTopologyList.put(TopologyName, (Topology) createTopology.invoke(topologyObject));
-			} catch (NoSuchMethodException e) {
-				// TODO Auto-generated catch block
-				System.out.println("Create Topology method not present. Aborting!!");
-				e.printStackTrace();
-				return;
-			} catch (SecurityException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 
-		} catch (IOException e1) {
+			Method createTopology = topologyClass.getMethod("CreateTopology");
+			m_hTopologyList.put(TopologyName, (Topology) createTopology.invoke(topologyObject));
+		} catch (NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Create Topology method not present. Aborting!!");
+			e.printStackTrace();
+			return;
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} catch (ClassNotFoundException e) {
@@ -331,7 +354,7 @@ public class ComponentManager implements Runnable{
 		//Calls start task
 	}
 	
-//	private long GetMyLocalTime()
+	//private long GetMyLocalTime()
 	//{
 	//	return new Date().getTime();
 	//}
@@ -365,9 +388,40 @@ public class ComponentManager implements Runnable{
 		}
 	}
 	
-	public void run() {
+	//public void cleanZK()
+	//{
+	//	if(m_oZooKeeperWrapper.exists("/Workers"))	
+	//		deleteZnode("/Workers");
 		
+//	}
+	
+	public void deleteZnode(String node) 
+	{
+		if(m_oZooKeeperWrapper.GetChildren(node).isEmpty())
+		{
+			try {
+				m_oZooKeeperWrapper.deleteZNode(node);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (KeeperException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return;
+		}
 		
+		List<String> children = m_oZooKeeperWrapper.GetChildren("/Workers");
+		
+		for(String child : children)
+		{
+			deleteZnode(child);
+		}
+		
+	}
+	
+	public void run() 
+	{
 		CheckIfWorkersAreAlive();
 		try {
 			Thread.sleep(m_oConfig.FailureInterval());
@@ -375,5 +429,9 @@ public class ComponentManager implements Runnable{
 
 		}
 	}
-	
 }
+
+
+
+
+

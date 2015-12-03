@@ -12,8 +12,12 @@ public class ZooKeeperConnector{
 
 	
 	private ZooKeeper 							m_oZooKeeper;
-	private java.util.concurrent.CountDownLatch m_oConnectedSignal = new java.util.concurrent.CountDownLatch(1);
+	private java.util.concurrent.CountDownLatch m_oConnectedSignal;
 	
+	public ZooKeeperConnector() {
+		// TODO Auto-generated constructor stub
+		m_oConnectedSignal = new java.util.concurrent.CountDownLatch(1);
+	}
 	
 	public ZooKeeper connect(String host) throws IOException, InterruptedException, IllegalStateException
 	{

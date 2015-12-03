@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 import org.apache.zookeeper.AsyncCallback.DataCallback;
+import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -14,19 +15,23 @@ import org.apache.zookeeper.ZooDefs.Ids;
 
 public class ZooKeeperWrapper {
 
-	private static ZooKeeper				m_oZooKeeper;
-	private static ZooKeeperConnector		m_oZooKeeperConnector;
+	private ZooKeeper				m_oZooKeeper;
+	private ZooKeeperConnector		m_oZooKeeperConnector;
+	private Logger					m_oLogger;
 	
 	public ZooKeeper createZKInstance(String host, Watcher watcherclass ) throws IOException
 	{
 		return new ZooKeeper(host, 5000, watcherclass) ;
 	}
 	
-	public void Initialize(String ConnectionIP)
+	public void Initialize(String ConnectionIP, Logger oLogger)
 	{
 		m_oZooKeeperConnector = new ZooKeeperConnector();
+		m_oLogger = oLogger;
+		m_oLogger.Info("Initializing ZK");
 		try {
 			m_oZooKeeper = m_oZooKeeperConnector.connect(ConnectionIP);
+			m_oLogger.Info("Connected to ZK");
 		} catch (IllegalStateException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -71,12 +76,12 @@ public class ZooKeeperWrapper {
 		return dataString;
 	}
 	
-	public void create(String path, String data) throws KeeperException, InterruptedException, IllegalStateException, IOException
+	public void create(String path, String data, StringCallback createNodeCallback) throws KeeperException, InterruptedException, IllegalStateException, IOException
 	{
 		byte [] dataByte = data.getBytes();
 		//Persistent znode - stay in ensemble until client closes it
 		//Ephemeral znode  - temporary
-		m_oZooKeeper.create(path, dataByte, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+		m_oZooKeeper.create(path, dataByte, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT,createNodeCallback, null);
 		
 	}
 
@@ -92,9 +97,20 @@ public class ZooKeeperWrapper {
 		m_oZooKeeper.getChildren(zNodePath, b, workerAssignmentCallback, object);
 	}
 
-	public void getData(String string, boolean b, DataCallback taskDataCallback, String task) {
+	public void getData(String zNodePath, Watcher dataChangeWatcher, DataCallback componentDataCallback, Object object) {
 		// TODO Auto-generated method stub
-		m_oZooKeeper.getData("/tasks/" + task, false, taskDataCallback, task);
+		m_oZooKeeper.getData(zNodePath, dataChangeWatcher, componentDataCallback, object);
 	}
+	
+	public void deleteZNode(String zNodePath) throws InterruptedException, KeeperException
+	{
+		m_oZooKeeper.delete(zNodePath,-1);
+	}
+	
+	//public exists(String zNodePath) throws KeeperException, InterruptedException
+	//{
+	//	m_oZooKeeper.exists(zNodePath, true);
+	//}
+	
 }
 	

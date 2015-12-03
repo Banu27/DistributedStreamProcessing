@@ -28,6 +28,7 @@ import org.apache.commons.lang3.SerializationUtils;
 
 import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 import org.apache.zookeeper.AsyncCallback.DataCallback;
+import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -77,7 +78,7 @@ public class NodeManager implements Runnable{
 
 	private Logger 									m_oLogger;
 	private ConfigAccessor 							m_oConfig;
-	private ZooKeeperWrapper						m_oZooKeepeer;
+	private ZooKeeperWrapper						m_oZooKeeper;
 	private String									m_sZooKeeperConnectionIP;
 	private String									m_sNodeIP;
 
@@ -86,8 +87,6 @@ public class NodeManager implements Runnable{
 		m_hClusterInfo 				= new HashMap<String, String>();
 		m_hTopologyList 			= new HashMap<String, Topology>();
 		m_hComponentInstances 		= new HashMap<String, ClassAndInstance>();
-		m_oZooKeepeer				= new ZooKeeperWrapper();
-		m_oZooKeepeer.Initialize(m_sZooKeeperConnectionIP);
 		m_oMutexOutputTuple 		= new ReentrantLock(true);
 		try {
 			m_sMyIp = InetAddress.getLocalHost().getHostAddress();
@@ -97,7 +96,7 @@ public class NodeManager implements Runnable{
 		m_lWorkerIPs = new ArrayList<String>();
 	}
 
-	public void Initialize(Logger logger, ConfigAccessor config, String ZKConnectionIP, String NodeIP) {
+	public void Initialize(Logger logger, ConfigAccessor config, String ZKConnectionIP, String NodeIP, ZooKeeperWrapper oZooKeeper) {
 		m_oInputTupleQ.InitNodeInput(this);
 		m_oOutputTupleQ.InitNodeOutput(this);
 		m_oLogger = logger;
@@ -105,6 +104,10 @@ public class NodeManager implements Runnable{
 		m_sJarFilesDir = m_oConfig.JarPath();
 		m_sZooKeeperConnectionIP = ZKConnectionIP;
 		m_sNodeIP = NodeIP;
+		m_oZooKeeper = oZooKeeper;
+		//Assuming ComponentManager/Master is already up.
+		
+		m_oZooKeeper.getChildren("/Topologies", TopologyChangeWatcher, TopologyGetChildrenCallback, null);
 	}
 
 	private int WriteFileIntoDir(ByteBuffer file, String filename) {
@@ -123,6 +126,28 @@ public class NodeManager implements Runnable{
 		}
 		return Commons.SUCCESS;
 	}
+	
+	public void UpdateClusterInfo(String zNodePath)
+	{
+		zNodePath = zNodePath.replace('/', ':');
+		try {
+			String data = m_oZooKeeper.read(zNodePath);
+			if(!m_hClusterInfo.get(zNodePath).equals(data))
+			{
+				m_hClusterInfo.put(zNodePath, data);
+			}
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 
 	public void UpdateClusterInfo()
 	{
@@ -130,23 +155,20 @@ public class NodeManager implements Runnable{
 		// This map will be updated by the watch registered with
 		// the zookeeper
 		
-		String zNodePath = "/";
+		m_hClusterInfo.clear();
+		String zNodePath = "/Topologies";
 		
-		RecursiveGetChildren(zNodePath);
-
-	}
-	
-	private void RecursiveGetChildren(String zNodePath)
-	{
-		if(m_oZooKeepeer.GetChildren(zNodePath).isEmpty())
+		List<String> children = m_oZooKeeper.GetChildren(zNodePath);
+		
+		for(String child : children)
 		{
 			try {
-				try {
-					m_hClusterInfo.put(zNodePath, m_oZooKeepeer.read(zNodePath));
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			
+				m_hClusterInfo.put(child, m_oZooKeeper.read("/Topologies/" + child));
+			
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			} catch (KeeperException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -154,16 +176,46 @@ public class NodeManager implements Runnable{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			return;
 		}
-		
-		for(String child : m_oZooKeepeer.GetChildren(zNodePath))
-		{
-			RecursiveGetChildren(zNodePath + "/" + child);
-		}
-		
-	}
+	}	
 	
+	Watcher TopologyChangeWatcher = new Watcher() 
+	{
+		public void process(WatchedEvent e) {
+			if(e.getType() == EventType.NodeChildrenChanged) {
+				m_oLogger.Info("Evenet Path is : " + e.getPath());
+				assert "/Topologies".equals( e.getPath() );
+				getComponents();
+			}
+		}
+	};
+
+	void getComponents()
+	{
+		m_oZooKeeper.getChildren("/Topologies", 
+				TopologyChangeWatcher, 
+				TopologyGetChildrenCallback, 
+				null);
+	}
+
+	ChildrenCallback TopologyGetChildrenCallback = new ChildrenCallback() 
+	{
+		public void processResult(int rc, String path, Object ctx, List<String> children){
+			switch (Code.get(rc)) { 
+			case CONNECTIONLOSS:
+				getComponents();
+				break;
+			case OK:
+				m_oLogger.Info("Succesfully got a list of workers: " 
+						+ children.size() 
+						+ " workers");
+				UpdateClusterInfo();
+				break;
+			default:
+				m_oLogger.Error("getChildren failed" + path);
+			}
+		}
+	};
 	
 	public void ReceiveTopology(ByteBuffer jar, String topologyName) 
 	{
@@ -191,9 +243,9 @@ public class NodeManager implements Runnable{
 			String instanceName = classname + String.valueOf(instanceId);
 			m_hComponentInstances.put(instanceName, classAndInstance);
 			
-			String pathToZnodeInstance = new String("/Topologies/"+TopologyName+"/"+classname+"/"+instanceName);
-			m_oZooKeepeer.create(pathToZnodeInstance,m_sNodeIP);
-			
+			String pathToZnodeInstance = new String("/Topologies/"+TopologyName+":"+classname+":"+instanceName);
+			m_oZooKeeper.create(pathToZnodeInstance,m_sNodeIP,createNodeCallback);
+			m_oZooKeeper.getData(pathToZnodeInstance, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
 			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
 			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			
@@ -230,44 +282,67 @@ public class NodeManager implements Runnable{
 
 	}
 	
+	StringCallback createNodeCallback = new StringCallback() {
+        public void processResult(int rc, String path, Object ctx, String name) {
+            switch (Code.get(rc)) { 
+            case CONNECTIONLOSS:
+                /*
+                 * Try again. Note that registering again is not a problem.
+                 * If the znode has already been created, then we get a 
+                 * NODEEXISTS event back.
+                 */
+                //createParent(path, (byte[]) ctx);
+                //MIGHT NEED TO FILL THIS
+                break;
+            case OK:
+                m_oLogger.Info("Created node");
+                
+                break;
+            case NODEEXISTS:
+                m_oLogger.Warning("ZNode already registered: " + path);
+                
+                break;
+            default:
+                m_oLogger.Error("Something went wrong: " + path);
+            }
+        }
+    };
+	
+	
 	//For change of any component instance or addition of new instance
-	Watcher TopologyComponentsChangeWatcher = new Watcher(){ 
+	Watcher ComponentDataChangeWatcher = new Watcher(){ 
 	    public void process(WatchedEvent e) {
-	        if(e.getType() == EventType.NodeChildrenChanged) {
-	            assert "/Topologies".equals( e.getPath() );
-
-	            getTasks();
+	        if(e.getType() == EventType.NodeDataChanged) {
+	            getData(e.getPath());
 	        }
 	    }
 	};
 
-	void getTasks() 
+	void getData(String zNodePath) 
 	{
-	    m_oZooKeepeer.getChildren("/Topologies",
-	                   TopologyComponentsChangeWatcher,
-	                   TopologyGetChildrenCallback,
+	    m_oZooKeeper.getData(zNodePath,
+	                   ComponentDataChangeWatcher,
+	                   ComponentDataChangeCallback,
 	                   null); 
 	}
 
-	ChildrenCallback TopologyGetChildrenCallback = new ChildrenCallback() 
+	DataCallback ComponentDataChangeCallback = new DataCallback() 
 	{
-	    public void processResult(int rc, String path, Object ctx, List<String> children) 
+	    public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) 
 	    {
 	        switch(Code.get(rc)) {
 	        case CONNECTIONLOSS:
-	            getTasks();
+	            //FILL?
 
 	            break;
 	        case OK:
-	            if(children != null) {
-	                UpdateClusterInfo(); 
-	            }
-
+	        	UpdateClusterInfo(path);	
 	            break;
 	        default:
 	            m_oLogger.Error("getChildren failed." + path);
 	        }
 	    }
+
 	};
 
 	
