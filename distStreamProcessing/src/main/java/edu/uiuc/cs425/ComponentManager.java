@@ -362,7 +362,8 @@ public class ComponentManager implements Runnable{
 
 	private void ReSched(String sIP)
 	{
-		
+		// get details of all the components running in the node
+		// from zookeeper
 		// remove from zookeeper
 		// resched all the components from the failed node to the new node
 	}
@@ -381,10 +382,10 @@ public class ComponentManager implements Runnable{
 					// remove entries from worklist and cache
 					iter.remove();
 					m_hProxyCache.remove(sIP);
+					// if false do rescheduling
 					ReSched(sIP);
 				}
 			}
-			// if false do rescheduling
 		}
 	}
 	
@@ -429,6 +430,13 @@ public class ComponentManager implements Runnable{
 
 		}
 	}
+	
+	// this method starts the streaming master
+	public static void main( String[] args )
+    {
+		
+    }
+    
 }
 
 

@@ -25,7 +25,12 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.lang3.SerializationUtils;
-
+import org.apache.thrift.TException;
+import org.apache.thrift.server.TNonblockingServer;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TNonblockingServerSocket;
+import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 import org.apache.zookeeper.AsyncCallback.DataCallback;
 import org.apache.zookeeper.AsyncCallback.StringCallback;
@@ -35,6 +40,7 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetChildren2Request;
+import org.w3c.dom.Node;
 import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
@@ -94,20 +100,24 @@ public class NodeManager implements Runnable{
 
 		}
 		m_lWorkerIPs = new ArrayList<String>();
+		m_oZooKeeper = new ZooKeeperWrapper();
 	}
 
-	public void Initialize(Logger logger, ConfigAccessor config, String ZKConnectionIP, String NodeIP, ZooKeeperWrapper oZooKeeper) {
+
+	public void Initialize(Logger logger, ConfigAccessor config, String NodeIP) {
+
 		m_oInputTupleQ.InitNodeInput(this);
 		m_oOutputTupleQ.InitNodeOutput(this);
 		m_oLogger = logger;
 		m_oConfig = config;
 		m_sJarFilesDir = m_oConfig.JarPath();
-		m_sZooKeeperConnectionIP = ZKConnectionIP;
+		m_sZooKeeperConnectionIP = m_oConfig.ZookeeperIP();
 		m_sNodeIP = NodeIP;
-		m_oZooKeeper = oZooKeeper;
+		m_oZooKeeper.Initialize(m_sZooKeeperConnectionIP, m_oLogger);;
 		//Assuming ComponentManager/Master is already up.
 		
 		m_oZooKeeper.getChildren("/Topologies", TopologyChangeWatcher, TopologyGetChildrenCallback, null);
+		m_nTransferInterval = m_oConfig.TupleTransferInterval(); // should be around 100ms
 	}
 
 	private int WriteFileIntoDir(ByteBuffer file, String filename) {
@@ -580,4 +590,81 @@ public class NodeManager implements Runnable{
 		}
 	}
 
+	// this method starts the streaming worker
+	public static void main( String[] args )
+    {
+		if( args.length !=1 )
+		{
+			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.NodeManager <xml_path>");
+			System.exit(Commons.FAILURE);
+		}
+		String sXML = args[0];
+		final ConfigAccessor m_oConfig = new ConfigAccessor();
+		
+		// instantiate logger and config accessor
+		if( Commons.FAILURE == m_oConfig.Initialize(sXML))
+		{
+			System.out.println("Failed to Initialize XML");
+			System.exit(Commons.FAILURE);
+		}
+		
+		final Logger m_oLogger = new Logger();
+		if( Commons.FAILURE == m_oLogger.Initialize(m_oConfig.LogPath()))
+		{
+			System.out.println("Failed to Initialize logger object");
+			System.exit(Commons.FAILURE);
+		}
+		
+		// instantiate a new copy of the node manager
+		// 
+		String hostIP = null;
+		try {
+			hostIP  = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			m_oLogger.Error(m_oLogger.StackTraceToString(e1));
+		}
+		NodeManager m_oNodeMgr = new NodeManager();
+		m_oNodeMgr.Initialize(m_oLogger, m_oConfig, hostIP);
+		
+		// instantiate the thrift server 
+		final CommandIfaceImpl m_oCommandImpl = new CommandIfaceImpl();
+		m_oCommandImpl.Initialize(null, m_oNodeMgr);
+		Thread 					m_oCmdServThread;
+		m_oCmdServThread = new Thread(new Runnable() {           
+            public void run() { 
+            	try {
+            		TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(m_oConfig.CmdPort());
+            		TNonblockingServer.Args args = new TNonblockingServer.Args(serverTransport).processor(new CommandInterface.Processor(m_oCommandImpl));
+        		    
+        		    args.transportFactory(new TFramedTransport.Factory(104857600)); //100mb
+        		    TServer server = new TNonblockingServer(args);
+        		    
+        		    server.serve();
+        		} catch (TException e)
+        		{
+        			m_oLogger.Error(m_oLogger.StackTraceToString(e));
+        			System.exit(Commons.FAILURE);
+        		}
+        		return;
+        	} 
+        });
+		m_oCmdServThread.start();
+		
+		// start the tuple transfer thread
+		Thread m_TupleTransferThread = new Thread(m_oNodeMgr);
+		m_TupleTransferThread.start();
+		
+		// wait for these threads to join
+		try {
+			m_oCmdServThread.join();
+			m_TupleTransferThread.join();
+		} catch (InterruptedException e) {
+			m_oLogger.Error(m_oLogger.StackTraceToString(e));
+			System.exit(Commons.FAILURE);
+		}
+		
+		
+		
+    }
 }
