@@ -20,23 +20,44 @@ public class CommandIfaceImpl implements Iface {
 			return Commons.SUCCESS;
 		}
 		
-		public void ReceiveJob(String JobName, ByteBuffer data, String TopologyName, String Filename) throws TException {
-			//m_oNodeManager.ReceiveJob(JobName, data, TopologyName, Filename);
-		}
 		
-		public void CreateInstance(String classname, String pathToJar, int instanceId, String topologyName) {
-
-			m_oNodeManager.CreateInstance(classname, pathToJar, instanceId, topologyName);
-		}
-
+		
 
 		public void TransferTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
-			// TODO Auto-generated method stub
-			
+			m_oNodeManager.ReceiveTuplesFromOutside(tuples);	
 		}
 
 		public boolean isAlive() throws TException {
-			// TODO Auto-generated method stub
 			return true;
 		}
+
+
+
+		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile) throws TException {
+			m_oComponentManager.ReceiveNewJob(Jarfile, TopologyName);	
+		}
+
+
+
+		public void CreateTask(String compName, String topologyname, int instanceId) throws TException {
+			m_oNodeManager.CreateTask(compName, instanceId, topologyname);
+		}
+
+
+
+
+		public void AddWorker(String sIP) throws TException {
+			m_oComponentManager.AdmitNewWorker(sIP);
+		}
+
+
+
+
+		public ByteBuffer GetJarFromMaster(String sTopologyName) throws TException {
+			return m_oComponentManager.GetJar(sTopologyName);
+		}
+
+
+
+		
 }

@@ -102,6 +102,19 @@ public class ZooKeeperWrapper {
 		m_oZooKeeper.getData(zNodePath, dataChangeWatcher, componentDataCallback, object);
 	}
 	
+	public void setData(String zNodePath, String value)
+	{
+		try {
+			m_oZooKeeper.setData(zNodePath, value.getBytes(), -1);
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public void deleteZNode(String zNodePath) throws InterruptedException, KeeperException
 	{
 		m_oZooKeeper.delete(zNodePath,-1);

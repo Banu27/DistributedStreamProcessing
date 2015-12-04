@@ -54,9 +54,9 @@ public class NodeManager implements Runnable{
 	// This map will be updated by the watch registered with
 	// the zookeeper
 	private HashMap<String,String> 				m_hClusterInfo;
+	private Lock 								m_hClusterInfoLock;
 	
 	private HashMap<String,Topology> 				m_hTopologyList;
-	private HashMap<String, ClassAndInstance> 		m_hComponentInstances;
 
 	private String 									m_sJarFilesDir;
 	private String 									m_sMyIp;
@@ -87,13 +87,16 @@ public class NodeManager implements Runnable{
 	private ZooKeeperWrapper						m_oZooKeeper;
 	private String									m_sZooKeeperConnectionIP;
 	private String									m_sNodeIP;
+	
+	// master 
+	private CommandIfaceProxy                       m_oMasterProxy;
 
 	public NodeManager() {
 		m_hTaskMap 					= new HashMap<String, TaskManager>();
 		m_hClusterInfo 				= new HashMap<String, String>();
 		m_hTopologyList 			= new HashMap<String, Topology>();
-		m_hComponentInstances 		= new HashMap<String, ClassAndInstance>();
 		m_oMutexOutputTuple 		= new ReentrantLock(true);
+		m_hClusterInfoLock          = new ReentrantLock(true);
 		try {
 			m_sMyIp = InetAddress.getLocalHost().getHostAddress();
 		} catch (UnknownHostException e1) {
@@ -101,6 +104,7 @@ public class NodeManager implements Runnable{
 		}
 		m_lWorkerIPs = new ArrayList<String>();
 		m_oZooKeeper = new ZooKeeperWrapper();
+		m_oMasterProxy = new CommandIfaceProxy();
 	}
 
 
@@ -118,6 +122,7 @@ public class NodeManager implements Runnable{
 		
 		m_oZooKeeper.getChildren("/Topologies", TopologyChangeWatcher, TopologyGetChildrenCallback, null);
 		m_nTransferInterval = m_oConfig.TupleTransferInterval(); // should be around 100ms
+		m_oMasterProxy.Initialize(m_oConfig.MasterIP(), m_oConfig.CmdPort(), m_oLogger);
 	}
 
 	private int WriteFileIntoDir(ByteBuffer file, String filename) {
@@ -142,6 +147,7 @@ public class NodeManager implements Runnable{
 		zNodePath = zNodePath.replace('/', ':');
 		try {
 			String data = m_oZooKeeper.read(zNodePath);
+			m_hClusterInfoLock.lock();
 			if(!m_hClusterInfo.get(zNodePath).equals(data))
 			{
 				m_hClusterInfo.put(zNodePath, data);
@@ -155,6 +161,8 @@ public class NodeManager implements Runnable{
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+			m_hClusterInfoLock.unlock();
 		}
 		
 	}
@@ -164,7 +172,7 @@ public class NodeManager implements Runnable{
 		// key: "<JobName>:<Component>:<Instance>" -> NodeIP
 		// This map will be updated by the watch registered with
 		// the zookeeper
-		
+		m_hClusterInfoLock.lock();
 		m_hClusterInfo.clear();
 		String zNodePath = "/Topologies";
 		
@@ -177,16 +185,17 @@ public class NodeManager implements Runnable{
 				m_hClusterInfo.put(child, m_oZooKeeper.read("/Topologies/" + child));
 			
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+				continue;
 			} catch (KeeperException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+				continue;
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+				continue;
 			}
 		}
+		m_hClusterInfoLock.unlock();
 	}	
 	
 	Watcher TopologyChangeWatcher = new Watcher() 
@@ -229,33 +238,51 @@ public class NodeManager implements Runnable{
 	
 	public void ReceiveTopology(ByteBuffer jar, String topologyName) 
 	{
-		String pathToJar = m_sJarFilesDir + '/' + topologyName;
+		String pathToJar = m_sJarFilesDir + '/' + topologyName + ".jar";
 		WriteFileIntoDir(jar, pathToJar);
 		RetrieveTopologyComponents(pathToJar, topologyName);
 		// Send jars to all the workers.
 	}
 
-	public void CreateInstance(String classname, String pathToJar, int instanceId, String TopologyName) {
+	public void CreateTask(String compName, int instanceId, String TopologyName) {
 		try {
+			String pathToJar = m_sJarFilesDir + "/" + TopologyName + ".jar";
+			// check if file is available, else request file from master
+			File f = new File(pathToJar);
+			if(!f.exists()) { 
+				ByteBuffer buf = null;
+				try {
+					buf = m_oMasterProxy.GetJarFromMaster(TopologyName);
+				} catch (TException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				WriteFileIntoDir(buf,pathToJar);
+			}
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 
-			classname = classname.replace('/', '.');
+			String classname = m_hTopologyList.get(TopologyName).Get(compName).getClassName();
 			Class<?> componentClass = cl.loadClass(classname);
-			Object componentInstance = componentClass.newInstance();
 
-			ClassAndInstance classAndInstance = new ClassAndInstance();
-			classAndInstance.setM_cClass(componentClass);
-			classAndInstance.setM_oClassObject(componentInstance);
-			classAndInstance.setM_nInstanceId(instanceId);
+			// there are two possible components - spout and bolt
+			TaskManager task = new TaskManager();
+			String key_ = TopologyName + ":" + compName + ":" + Integer.toString(instanceId);
+			m_hTaskMap.put(key_, task);
+			if(m_hTopologyList.get(TopologyName).Get(compName).getCompType() == Commons.BOLT)
+			{
+				IBolt bolt = (IBolt) componentClass.newInstance();
+				task.Init(TopologyName, compName, instanceId, bolt, this);
+			}
+			else
+			{
+				ISpout spout = (ISpout) componentClass.newInstance();
+				task.Init(TopologyName, compName, instanceId, spout, this);
+				
+			}
 			
-			//Is the next line needed?
-			String instanceName = classname + String.valueOf(instanceId);
-			m_hComponentInstances.put(instanceName, classAndInstance);
-			
-			String pathToZnodeInstance = new String("/Topologies/"+TopologyName+":"+classname+":"+instanceName);
-			m_oZooKeeper.create(pathToZnodeInstance,m_sNodeIP,createNodeCallback);
-			m_oZooKeeper.getData(pathToZnodeInstance, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
+			m_oZooKeeper.create(key_,m_sNodeIP,createNodeCallback);
+			m_oZooKeeper.getData(key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
 			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
 			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			
@@ -480,6 +507,7 @@ public class NodeManager implements Runnable{
 		String key = tuple.m_sJobname + ":" + tuple.m_sDestCompName + ":" + 
 				Integer.toString(tuple.m_nDestInstId);
 		String sIP = null;
+		m_hClusterInfoLock.lock();
 		if(m_hClusterInfo.containsKey(key))
 		{
 			sIP = m_hClusterInfo.get(key);
@@ -488,6 +516,7 @@ public class NodeManager implements Runnable{
 			m_oLogger.Error("Unable to find the IP containing the instance " + key + ". Tuple "
 						+ "will not proceed to next components" );
 		} 
+		m_hClusterInfoLock.unlock();
 		return sIP;
 	}
 

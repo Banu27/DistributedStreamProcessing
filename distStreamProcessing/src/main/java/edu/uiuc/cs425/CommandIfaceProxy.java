@@ -41,18 +41,10 @@ public class CommandIfaceProxy implements Iface{
 			return Commons.SUCCESS;
 		}
 
-		public void CreateInstance(String classname, String pathToJar, int i, String topologyName) throws TException{
-			// TODO Auto-generated method stub
-			m_oClient.CreateInstance(classname, pathToJar, i, topologyName);
-		}
 		
-		public void ReceiveJob(String JobName, ByteBuffer data, String TopologyName, String Filename) throws TException{
-			m_oClient.ReceiveJob(JobName, data, TopologyName, Filename);
-		}
 
 		public void TransferTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
-			// TODO Auto-generated method stub
-			
+			m_oClient.TransferTupleToNode(nTuples, tuples);	
 		}
 
 		public boolean isAlive() {
@@ -62,6 +54,29 @@ public class CommandIfaceProxy implements Iface{
 				return false;
 			}
 		}
+
+		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile) throws TException {
+			m_oClient.ReceiveJobFromClient(TopologyName, Jarfile);
+			
+		}
+
+
+		public void CreateTask(String compName, String topologyname, int instanceId) throws TException {
+			m_oClient.CreateTask(compName, topologyname, instanceId);
+			
+		}
+
+		public void AddWorker(String sIP) throws TException {
+			m_oClient.AddWorker(sIP);
+			
+		}
+
+		public ByteBuffer GetJarFromMaster(String sTopologyName) throws TException {
+			// TODO Auto-generated method stub
+			return m_oClient.GetJarFromMaster(sTopologyName);
+		}
+
+		
 
 		
 			
