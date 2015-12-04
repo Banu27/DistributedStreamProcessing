@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MembershipConfig>
+  <Cluster ipMaster="10.16.8.85" cmdPort="9090" zooIP="" />
+  <Failure interval="30000" />
+  <Logger path="" />
+  <Topologies jarPath="" transferInterval="3000/>
+</MembershipConfig>
