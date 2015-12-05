@@ -110,18 +110,25 @@ public class NodeManager implements Runnable{
 
 	public void Initialize(Logger logger, ConfigAccessor config, String NodeIP) {
 
-		m_oInputTupleQ.InitNodeInput(this);
-		m_oOutputTupleQ.InitNodeOutput(this);
 		m_oLogger = logger;
 		m_oConfig = config;
+		m_oInputTupleQ = new DisruptorWrapper(m_oConfig.RingBufferValue());
+		m_oOutputTupleQ = new DisruptorWrapper(m_oConfig.RingBufferValue());
+		m_oInputTupleQ.InitNodeInput(this);
+		m_oOutputTupleQ.InitNodeOutput(this);
+
 		m_sJarFilesDir = m_oConfig.JarPath();
 		m_sZooKeeperConnectionIP = m_oConfig.ZookeeperIP();
 		m_sNodeIP = NodeIP;
 		m_oZooKeeper.Initialize(m_sZooKeeperConnectionIP, m_oLogger);;
 		//Assuming ComponentManager/Master is already up.
 		
+		System.out.println("Zookeeper setup");
+		
 		m_oZooKeeper.getChildren("/Topologies", TopologyChangeWatcher, TopologyGetChildrenCallback, null);
 		m_nTransferInterval = m_oConfig.TupleTransferInterval(); // should be around 100ms
+		
+		System.out.println("Trying to set up master proxy");
 		m_oMasterProxy.Initialize(m_oConfig.MasterIP(), m_oConfig.CmdPort(), m_oLogger);
 	}
 
@@ -172,6 +179,8 @@ public class NodeManager implements Runnable{
 		// key: "<JobName>:<Component>:<Instance>" -> NodeIP
 		// This map will be updated by the watch registered with
 		// the zookeeper
+		
+		m_oLogger.Info("Updating cluster info");
 		m_hClusterInfoLock.lock();
 		m_hClusterInfo.clear();
 		String zNodePath = "/Topologies";
@@ -225,9 +234,9 @@ public class NodeManager implements Runnable{
 				getComponents();
 				break;
 			case OK:
-				m_oLogger.Info("Succesfully got a list of workers: " 
+				m_oLogger.Info("Succesfully got a list of topologies: " 
 						+ children.size() 
-						+ " workers");
+						+ " topologies");
 				UpdateClusterInfo();
 				break;
 			default:
@@ -625,9 +634,12 @@ public class NodeManager implements Runnable{
 		if( args.length !=1 )
 		{
 			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.NodeManager <xml_path>");
-			System.exit(Commons.FAILURE);
+			
+			//Commented for local machine test on eclipse with cmd line args
+			//System.exit(Commons.FAILURE);
 		}
-		String sXML = args[0];
+		//String sXML = args[0];
+		String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
 		final ConfigAccessor m_oConfig = new ConfigAccessor();
 		
 		// instantiate logger and config accessor
@@ -644,6 +656,8 @@ public class NodeManager implements Runnable{
 			System.exit(Commons.FAILURE);
 		}
 		
+		System.out.println("Config accessor and logger initialized successfully!");
+		
 		// instantiate a new copy of the node manager
 		// 
 		String hostIP = null;
@@ -654,8 +668,12 @@ public class NodeManager implements Runnable{
 			m_oLogger.Error(m_oLogger.StackTraceToString(e1));
 		}
 		NodeManager m_oNodeMgr = new NodeManager();
+		
+		System.out.println("Host IP : " + hostIP);
+		
 		m_oNodeMgr.Initialize(m_oLogger, m_oConfig, hostIP);
 		
+		System.out.println("Node Manager up ");
 		// instantiate the thrift server 
 		final CommandIfaceImpl m_oCommandImpl = new CommandIfaceImpl();
 		m_oCommandImpl.Initialize(null, m_oNodeMgr);

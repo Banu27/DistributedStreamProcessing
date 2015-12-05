@@ -28,6 +28,7 @@ public class ConfigAccessor {
 	private String      m_sLogPath;
 	private String      m_sJarPath;
 	private int 	    m_nTransferInterval; //tuple
+	private int 		m_nRingBufferValue;
 	
 	public ConfigAccessor()
 	{
@@ -37,6 +38,11 @@ public class ConfigAccessor {
 	public int TupleTransferInterval()
 	{
 		return m_nTransferInterval;
+	}
+	
+	public int RingBufferValue()
+	{
+		return m_nRingBufferValue;
 	}
 	
 	public String ZookeeperIP()
@@ -123,6 +129,11 @@ public class ConfigAccessor {
 				Element eElement = (Element) nNode;
 				m_sJarPath  = eElement.getAttribute("jarPath");
 				m_nTransferInterval = Integer.parseInt(eElement.getAttribute("transferInterval"));
+			}
+			else if(nNode.getNodeName() == "Disruptor")
+			{
+				Element eElement = (Element) nNode;
+				m_nRingBufferValue = Integer.parseInt(eElement.getAttribute("ringBufferValue"));
 			}
 			
 		}
