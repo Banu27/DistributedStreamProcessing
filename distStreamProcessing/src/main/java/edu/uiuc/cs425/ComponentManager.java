@@ -144,9 +144,9 @@ public class ComponentManager implements Runnable {
 	};
 
 	
-	public ByteBuffer GetJar(String topology)
+	public ByteBuffer GetJarFromMaster(String file)
 	{
-		String file = m_sJarFilesDir + "/" + topology + ".jar";
+		//String file = m_sJarFilesDir + "/" + topology + ".jar";
 		FileInputStream fIn;
 		FileChannel fChan;
 		long fSize;
@@ -265,13 +265,14 @@ public class ComponentManager implements Runnable {
 					for (int i = 0; i < Components.GetParallelismLevel(compName); i++) {
 						// Call the start task at the worker
 						CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();
-						int nodeIndex = m_nNextAssignableWorker % m_lWorkersList.size();
 						m_nNextAssignableWorker++;
-						m_oLogger.Info("Chosen to assign task at : " + String.valueOf(nodeIndex) + m_lWorkersList.get(nodeIndex));
+						m_oLogger.Info("Size of worker list : " + String.valueOf(m_lWorkersList.size()));
+						int nodeIndex = m_nNextAssignableWorker % m_lWorkersList.size();
+						m_oLogger.Info("Chosen to assign task at : " + String.valueOf(nodeIndex) + " " + m_lWorkersList.get(nodeIndex));
 						if (Commons.SUCCESS == ProxyTemp.Initialize(
 								m_lWorkersList.get(nodeIndex),
 								m_nCommandServicePort, m_oLogger)) {
-							ProxyTemp.CreateTask(compName, TopologyName, i);
+							ProxyTemp.CreateTask(compName, TopologyName, i, pathToJar);
 							String taskString = TopologyName + ":" + compName + ":" + Integer.toString(i);
 							if( m_IPtoTaskString.containsKey(m_lWorkersList.get(nodeIndex)))
 							{
