@@ -39,8 +39,8 @@ public class CommandIfaceImpl implements Iface {
 
 
 
-		public void CreateTask(String compName, String topologyname, int instanceId) throws TException {
-			m_oNodeManager.CreateTask(compName, instanceId, topologyname);
+		public void CreateTask(String compName, String topologyname, int instanceId, String pathToJar) throws TException {
+			m_oNodeManager.CreateTask(compName, instanceId, topologyname, pathToJar);
 		}
 
 
@@ -54,7 +54,7 @@ public class CommandIfaceImpl implements Iface {
 
 
 		public ByteBuffer GetJarFromMaster(String sTopologyName) throws TException {
-			return m_oComponentManager.GetJar(sTopologyName);
+			return m_oComponentManager.GetJarFromMaster(sTopologyName);
 		}
 
 

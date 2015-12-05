@@ -61,8 +61,8 @@ public class CommandIfaceProxy implements Iface{
 		}
 
 
-		public void CreateTask(String compName, String topologyname, int instanceId) throws TException {
-			m_oClient.CreateTask(compName, topologyname, instanceId);
+		public void CreateTask(String compName, String topologyname, int instanceId, String pathToJar) throws TException {
+			m_oClient.CreateTask(compName, topologyname, instanceId, pathToJar);
 			
 		}
 
