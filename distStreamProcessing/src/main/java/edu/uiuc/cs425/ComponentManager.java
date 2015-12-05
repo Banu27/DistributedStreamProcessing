@@ -502,8 +502,6 @@ public class ComponentManager implements Runnable {
 			System.exit(Commons.FAILURE);
 		}
 
-		// instantiate a new copy of the node manager
-		//
 		String hostIP = null;
 		try {
 			hostIP = InetAddress.getLocalHost().getHostAddress();

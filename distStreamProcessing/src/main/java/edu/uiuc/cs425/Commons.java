@@ -48,6 +48,16 @@ public class Commons {
 	    return res;
 	}
 	
+	public static void sleep(int ms)
+	{
+		try {
+			Thread.sleep(ms);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static int Hash(String str)
 	{
 		int hash = 7;

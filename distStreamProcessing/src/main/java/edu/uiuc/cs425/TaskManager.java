@@ -23,6 +23,10 @@ public class TaskManager implements Runnable {
 		m_nInstanceId			= id;
 		m_oBolt					= obj;
 		m_oNM					= oNM;
+		
+		// cast to Bcomponents and set task manager
+		BComponent comp = (BComponent)m_oBolt;
+		comp.SetTaskManager(this);
 		m_oDisruptor 			= new DisruptorWrapper(2048);
 		m_oDisruptor.InitBolt(m_oBolt);
 	}
