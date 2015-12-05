@@ -60,6 +60,7 @@ public class ComponentManager implements Runnable {
 		m_WorkerListLock = new ReentrantLock();
 		m_hProxyCache = new HashMap<String, CommandIfaceProxy>();
 		m_IPtoTaskString = new HashMap<String, ArrayList<String>>();
+		m_hTopologyList = new HashMap<String, Topology>();
 	}
 
 	public void Initialize(ConfigAccessor oAccess, Logger oLogger) {
