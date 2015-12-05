@@ -283,30 +283,37 @@ public class NodeManager implements Runnable{
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			topologyName = topologyName.replace('/', '.');
-			String classname = m_hTopologyList.get(topologyName).Get(compName).getClassName();
-			Class<?> componentClass = cl.loadClass(classname);
+			m_oLogger.Info("Retrieving topology : " + topologyName);
+			Topology componentsTopology = m_hTopologyList.get(topologyName);
+			if(componentsTopology.IsValid())
+			{	String classname = componentsTopology.Get(compName).getClassName();
+				Class<?> componentClass = cl.loadClass(classname);
 
 			// there are two possible components - spout and bolt
-			TaskManager task = new TaskManager();
-			String key_ = topologyName + ":" + compName + ":" + Integer.toString(instanceId);
-			m_hTaskMap.put(key_, task);
-			if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
-			{
-				IBolt bolt = (IBolt) componentClass.newInstance();
+				TaskManager task = new TaskManager();
+				String key_ = topologyName + ":" + compName + ":" + Integer.toString(instanceId);
+				m_hTaskMap.put(key_, task);
+				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
+				{
+					IBolt bolt = (IBolt) componentClass.newInstance();
 				task.Init(topologyName, compName, instanceId, bolt, this);
+				}
+				else
+				{
+					ISpout spout = (ISpout) componentClass.newInstance();
+					task.Init(topologyName, compName, instanceId, spout, this);
+				
+				}
+			
+				m_oZooKeeper.create(key_,m_sNodeIP,createNodeCallback);
+				m_oZooKeeper.getData(key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
+			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
+			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			}
 			else
 			{
-				ISpout spout = (ISpout) componentClass.newInstance();
-				task.Init(topologyName, compName, instanceId, spout, this);
-				
+				m_oLogger.Error("Couldn't find topology!! ");
 			}
-			
-			m_oZooKeeper.create(key_,m_sNodeIP,createNodeCallback);
-			m_oZooKeeper.getData(key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
-			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
-			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
-			
 
 		} catch (ClassNotFoundException e1) {
 			// TODO Auto-generated catch block
@@ -420,7 +427,7 @@ public class NodeManager implements Runnable{
 	// - wait to add all the tasks)
 
 	@SuppressWarnings("unchecked")
-	private void RetrieveTopologyComponents(String pathToJar, String topologyName) // (Thrift)
+	private void RetrieveTopologyComponents(String pathToJar, String TopologyName) // (Thrift)
 	{
 		// Get the topology from the jar.
 		// Receive the parallelism level
@@ -429,12 +436,20 @@ public class NodeManager implements Runnable{
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 
-			topologyName = topologyName.replace('/', '.');
-			Class<?> topologyClass = cl.loadClass(topologyName);
+			TopologyName = TopologyName.replace('/', '.');
+			Class<?> topologyClass = cl.loadClass(TopologyName);
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
-			m_hTopologyList.put(topologyName, (Topology) createTopology.invoke(topologyObject));
+			Topology components = (Topology) createTopology.invoke(topologyObject);
+			components.setJarFilepath(pathToJar);
+			if(components.IsValid())
+			{
+				m_hTopologyList.put(TopologyName,components );
+				m_oLogger.Info("Put topology in hash : " + TopologyName);
+			}
+			else
+				m_oLogger.Error("No topology object retrieved");
 
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
