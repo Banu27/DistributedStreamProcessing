@@ -483,11 +483,11 @@ public class ComponentManager implements Runnable {
 	public static void main(String[] args) {
 		if (args.length != 1) {
 			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.NodeManager <xml_path>");
-			//System.exit(Commons.FAILURE);
+			System.exit(Commons.FAILURE);
 		}
 		///Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml
-		//String sXML = args[0];
-		String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
+		String sXML = args[0];
+		//String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
 		final ConfigAccessor m_oConfig = new ConfigAccessor();
 
 		// instantiate logger and config accessor

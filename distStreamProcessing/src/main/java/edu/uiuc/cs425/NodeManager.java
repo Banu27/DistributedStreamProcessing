@@ -53,8 +53,8 @@ public class NodeManager implements Runnable{
 	// key: "<JobName>:<Component>:<Instance>" -> NodeIP
 	// This map will be updated by the watch registered with
 	// the zookeeper
-	private HashMap<String,String> 				m_hClusterInfo;
-	private Lock 								m_hClusterInfoLock;
+	private HashMap<String,String> 					m_hClusterInfo;
+	private Lock 									m_hClusterInfoLock;
 	
 	private HashMap<String,Topology> 				m_hTopologyList;
 
@@ -82,8 +82,8 @@ public class NodeManager implements Runnable{
 	// proxies and not to recreate them every time
 	private HashMap<String, CommandIfaceProxy> 		m_hIPtoProxy;
 
-	private Logger 									m_oLogger;
-	private ConfigAccessor 							m_oConfig;
+	private Logger 									m_mLogger;
+	private ConfigAccessor 							m_mConfig;
 	private ZooKeeperWrapper						m_oZooKeeper;
 	private String									m_sZooKeeperConnectionIP;
 	private String									m_sNodeIP;
@@ -110,26 +110,36 @@ public class NodeManager implements Runnable{
 
 	public void Initialize(Logger logger, ConfigAccessor config, String NodeIP) {
 
-		m_oLogger = logger;
-		m_oConfig = config;
-		m_oInputTupleQ = new DisruptorWrapper(m_oConfig.RingBufferValue());
-		m_oOutputTupleQ = new DisruptorWrapper(m_oConfig.RingBufferValue());
+		m_mLogger = logger;
+		m_mConfig = config;
+		m_oInputTupleQ = new DisruptorWrapper(m_mConfig.RingBufferValue());
+		m_oOutputTupleQ = new DisruptorWrapper(m_mConfig.RingBufferValue());
 		m_oInputTupleQ.InitNodeInput(this);
 		m_oOutputTupleQ.InitNodeOutput(this);
 
-		m_sJarFilesDir = m_oConfig.JarPath();
-		m_sZooKeeperConnectionIP = m_oConfig.ZookeeperIP();
+		m_sJarFilesDir = m_mConfig.JarPath();
+		m_sZooKeeperConnectionIP = m_mConfig.ZookeeperIP();
 		m_sNodeIP = NodeIP;
-		m_oZooKeeper.Initialize(m_sZooKeeperConnectionIP, m_oLogger);;
+		m_oZooKeeper.Initialize(m_sZooKeeperConnectionIP, m_mLogger);;
 		//Assuming ComponentManager/Master is already up.
 		
 		System.out.println("Zookeeper setup");
 		
 		m_oZooKeeper.getChildren("/Topologies", TopologyChangeWatcher, TopologyGetChildrenCallback, null);
-		m_nTransferInterval = m_oConfig.TupleTransferInterval(); // should be around 100ms
+		m_nTransferInterval = m_mConfig.TupleTransferInterval(); // should be around 100ms
 		
 		System.out.println("Trying to set up master proxy");
-		m_oMasterProxy.Initialize(m_oConfig.MasterIP(), m_oConfig.CmdPort(), m_oLogger);
+		m_oMasterProxy.Initialize(m_mConfig.MasterIP(), m_mConfig.CmdPort(), m_mLogger);
+	}
+	
+	public void RequestMasterAddWorker()
+	{
+		try {
+			m_oMasterProxy.AddWorker(m_sMyIp);
+		} catch (TException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private int WriteFileIntoDir(ByteBuffer file, String filename) {
@@ -180,7 +190,7 @@ public class NodeManager implements Runnable{
 		// This map will be updated by the watch registered with
 		// the zookeeper
 		
-		m_oLogger.Info("Updating cluster info");
+		m_mLogger.Info("Updating cluster info");
 		m_hClusterInfoLock.lock();
 		m_hClusterInfo.clear();
 		String zNodePath = "/Topologies";
@@ -211,7 +221,7 @@ public class NodeManager implements Runnable{
 	{
 		public void process(WatchedEvent e) {
 			if(e.getType() == EventType.NodeChildrenChanged) {
-				m_oLogger.Info("Evenet Path is : " + e.getPath());
+				m_mLogger.Info("Evenet Path is : " + e.getPath());
 				assert "/Topologies".equals( e.getPath() );
 				getComponents();
 			}
@@ -234,13 +244,13 @@ public class NodeManager implements Runnable{
 				getComponents();
 				break;
 			case OK:
-				m_oLogger.Info("Succesfully got a list of topologies: " 
+				m_mLogger.Info("Succesfully got a list of topologies: " 
 						+ children.size() 
 						+ " topologies");
 				UpdateClusterInfo();
 				break;
 			default:
-				m_oLogger.Error("getChildren failed" + path);
+				m_mLogger.Error("getChildren failed" + path);
 			}
 		}
 	};
@@ -341,15 +351,15 @@ public class NodeManager implements Runnable{
                 //MIGHT NEED TO FILL THIS
                 break;
             case OK:
-                m_oLogger.Info("Created node");
+                m_mLogger.Info("Created node");
                 
                 break;
             case NODEEXISTS:
-                m_oLogger.Warning("ZNode already registered: " + path);
+                m_mLogger.Warning("ZNode already registered: " + path);
                 
                 break;
             default:
-                m_oLogger.Error("Something went wrong: " + path);
+                m_mLogger.Error("Something went wrong: " + path);
             }
         }
     };
@@ -385,7 +395,7 @@ public class NodeManager implements Runnable{
 	        	UpdateClusterInfo(path);	
 	            break;
 	        default:
-	            m_oLogger.Error("getChildren failed." + path);
+	            m_mLogger.Error("getChildren failed." + path);
 	        }
 	    }
 
@@ -522,7 +532,7 @@ public class NodeManager implements Runnable{
 			sIP = m_hClusterInfo.get(key);
 		} else
 		{
-			m_oLogger.Error("Unable to find the IP containing the instance " + key + ". Tuple "
+			m_mLogger.Error("Unable to find the IP containing the instance " + key + ". Tuple "
 						+ "will not proceed to next components" );
 		} 
 		m_hClusterInfoLock.unlock();
@@ -559,7 +569,7 @@ public class NodeManager implements Runnable{
 			mgr.AddTuple(tuple);
 		} else
 		{
-			m_oLogger.Error("Tuple send to wrong node. Tuple will not move forward");
+			m_mLogger.Error("Tuple send to wrong node. Tuple will not move forward");
 		}
 		
 		
@@ -610,8 +620,8 @@ public class NodeManager implements Runnable{
 						prxy = m_hIPtoProxy.get(sIP);
 					} else {
 						prxy = new CommandIfaceProxy();
-						if (Commons.FAILURE == prxy.Initialize(sIP, m_oConfig.CmdPort(), m_oLogger)) {
-							m_oLogger.Error("unable to connect to worker to send tuples " + sIP);
+						if (Commons.FAILURE == prxy.Initialize(sIP, m_mConfig.CmdPort(), m_mLogger)) {
+							m_mLogger.Error("unable to connect to worker to send tuples " + sIP);
 							continue;
 						}
 					}
@@ -640,17 +650,17 @@ public class NodeManager implements Runnable{
 		}
 		//String sXML = args[0];
 		String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
-		final ConfigAccessor m_oConfig = new ConfigAccessor();
+		final ConfigAccessor m_mConfig = new ConfigAccessor();
 		
 		// instantiate logger and config accessor
-		if( Commons.FAILURE == m_oConfig.Initialize(sXML))
+		if( Commons.FAILURE == m_mConfig.Initialize(sXML))
 		{
 			System.out.println("Failed to Initialize XML");
 			System.exit(Commons.FAILURE);
 		}
 		
-		final Logger m_oLogger = new Logger();
-		if( Commons.FAILURE == m_oLogger.Initialize(m_oConfig.LogPath()))
+		final Logger m_mLogger = new Logger();
+		if( Commons.FAILURE == m_mLogger.Initialize(m_mConfig.LogPath()))
 		{
 			System.out.println("Failed to Initialize logger object");
 			System.exit(Commons.FAILURE);
@@ -665,24 +675,28 @@ public class NodeManager implements Runnable{
 			hostIP  = InetAddress.getLocalHost().getHostAddress();
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
-			m_oLogger.Error(m_oLogger.StackTraceToString(e1));
+			m_mLogger.Error(m_mLogger.StackTraceToString(e1));
 		}
-		NodeManager m_oNodeMgr = new NodeManager();
+		NodeManager m_mNodeManager = new NodeManager();
 		
 		System.out.println("Host IP : " + hostIP);
 		
-		m_oNodeMgr.Initialize(m_oLogger, m_oConfig, hostIP);
+		m_mNodeManager.Initialize(m_mLogger, m_mConfig, hostIP);
 		
 		System.out.println("Node Manager up ");
+		
+		m_mNodeManager.RequestMasterAddWorker();
+		
 		// instantiate the thrift server 
-		final CommandIfaceImpl m_oCommandImpl = new CommandIfaceImpl();
-		m_oCommandImpl.Initialize(null, m_oNodeMgr);
+		
+		final CommandIfaceImpl m_mCommandImpl = new CommandIfaceImpl();
+		m_mCommandImpl.Initialize(null, m_mNodeManager);
 		Thread 					m_oCmdServThread;
 		m_oCmdServThread = new Thread(new Runnable() {           
             public void run() { 
             	try {
-            		TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(m_oConfig.CmdPort());
-            		TNonblockingServer.Args args = new TNonblockingServer.Args(serverTransport).processor(new CommandInterface.Processor(m_oCommandImpl));
+            		TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(m_mConfig.CmdPort());
+            		TNonblockingServer.Args args = new TNonblockingServer.Args(serverTransport).processor(new CommandInterface.Processor(m_mCommandImpl));
         		    
         		    args.transportFactory(new TFramedTransport.Factory(104857600)); //100mb
         		    TServer server = new TNonblockingServer(args);
@@ -690,7 +704,7 @@ public class NodeManager implements Runnable{
         		    server.serve();
         		} catch (TException e)
         		{
-        			m_oLogger.Error(m_oLogger.StackTraceToString(e));
+        			m_mLogger.Error(m_mLogger.StackTraceToString(e));
         			System.exit(Commons.FAILURE);
         		}
         		return;
@@ -699,7 +713,7 @@ public class NodeManager implements Runnable{
 		m_oCmdServThread.start();
 		
 		// start the tuple transfer thread
-		Thread m_TupleTransferThread = new Thread(m_oNodeMgr);
+		Thread m_TupleTransferThread = new Thread(m_mNodeManager);
 		m_TupleTransferThread.start();
 		
 		// wait for these threads to join
@@ -707,7 +721,7 @@ public class NodeManager implements Runnable{
 			m_oCmdServThread.join();
 			m_TupleTransferThread.join();
 		} catch (InterruptedException e) {
-			m_oLogger.Error(m_oLogger.StackTraceToString(e));
+			m_mLogger.Error(m_mLogger.StackTraceToString(e));
 			System.exit(Commons.FAILURE);
 		}
 		
