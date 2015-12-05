@@ -251,6 +251,7 @@ public class ComponentManager implements Runnable {
 	}
 
 	void StartComponentsAtNodes(String TopologyName, String pathToJar) {
+		
 		Topology Components = m_hTopologyList.get(TopologyName);
 		m_oLogger.Info("Ready to start components at nodes");
 		if(Components.IsValid())
@@ -266,6 +267,7 @@ public class ComponentManager implements Runnable {
 						CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();
 						int nodeIndex = m_nNextAssignableWorker % m_lWorkersList.size();
 						m_nNextAssignableWorker++;
+						m_oLogger.Info("Chosen to assign task at : " + String.valueOf(nodeIndex) + m_lWorkersList.get(nodeIndex));
 						if (Commons.SUCCESS == ProxyTemp.Initialize(
 								m_lWorkersList.get(nodeIndex),
 								m_nCommandServicePort, m_oLogger)) {
