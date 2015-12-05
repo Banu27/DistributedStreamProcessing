@@ -646,10 +646,10 @@ public class NodeManager implements Runnable{
 			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.NodeManager <xml_path>");
 			
 			//Commented for local machine test on eclipse with cmd line args
-			//System.exit(Commons.FAILURE);
+			System.exit(Commons.FAILURE);
 		}
-		//String sXML = args[0];
-		String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
+		String sXML = args[0];
+		//String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
 		final ConfigAccessor m_mConfig = new ConfigAccessor();
 		
 		// instantiate logger and config accessor
