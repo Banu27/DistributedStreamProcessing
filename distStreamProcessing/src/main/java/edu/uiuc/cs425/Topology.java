@@ -7,7 +7,7 @@ import java.util.Set;
 public class Topology {
 	
 	String sTopologyName;
-	
+	private String sjarFilepath;
 	//Key --> Component Name
 	//Value --> TopologyComponent
 	private HashMap<String, TopologyComponent> topology;
@@ -86,6 +86,14 @@ public class Topology {
 
 	public void setSpoutName(String spoutName) {
 		this.spoutName = spoutName;
+	}
+
+	public String getJarFilepath() {
+		return sjarFilepath;
+	}
+
+	public void setJarFilepath(String sjarFilepath) {
+		this.sjarFilepath = sjarFilepath;
 	}
 	
 }

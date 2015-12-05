@@ -314,6 +314,7 @@ Topology Components = m_hTopologyList.get(TopologyName);
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
 			Topology components = (Topology) createTopology.invoke(topologyObject);
+			components.setJarFilepath(pathToJar);
 			if(components.IsValid())
 			{
 				m_hTopologyList.put(TopologyName,components );
@@ -386,7 +387,7 @@ Topology Components = m_hTopologyList.get(TopologyName);
 						m_lWorkersList.get(nodeIndex),
 						m_nCommandServicePort, m_oLogger)) {
 					try {
-						ProxyTemp.CreateTask(tokens[1], tokens[0], Integer.parseInt(tokens[2]));
+						ProxyTemp.CreateTask(tokens[1], tokens[0], Integer.parseInt(tokens[2]), m_hTopologyList.get(tokens[0]).getJarFilepath());
 					} catch (NumberFormatException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
