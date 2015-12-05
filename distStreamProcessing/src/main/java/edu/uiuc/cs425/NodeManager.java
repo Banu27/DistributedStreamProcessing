@@ -282,7 +282,7 @@ public class NodeManager implements Runnable{
 			}
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
-
+			topologyName = topologyName.replace('/', '.');
 			String classname = m_hTopologyList.get(topologyName).Get(compName).getClassName();
 			Class<?> componentClass = cl.loadClass(classname);
 
