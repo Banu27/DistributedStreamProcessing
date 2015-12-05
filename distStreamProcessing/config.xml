@@ -3,6 +3,6 @@
   <!--10.16.8.85 --><Cluster ipMaster="172.22.150.50" cmdPort="9090" zooIP="172.22.150.50" />
   <Failure interval="30000" />
   <Logger path="/home/muthkmr2/mp4/logfile" />
-  <Topologies jarPath="/home/muthkmr2/myfile.jar" transferInterval="3000"/>
+  <Topologies jarPath="" transferInterval="3000"/>
   <Disruptor  ringBufferValue="2048"/>
 </MembershipConfig>

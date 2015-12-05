@@ -252,7 +252,9 @@ public class ComponentManager implements Runnable {
 
 	void StartComponentsAtNodes(String TopologyName, String pathToJar) {
 		
-		Topology Components = m_hTopologyList.get(TopologyName);
+		TopologyName = TopologyName.replace('/','.');
+		m_oLogger.Info("Retrieving from hash : " + TopologyName);
+Topology Components = m_hTopologyList.get(TopologyName);
 		m_oLogger.Info("Ready to start components at nodes");
 		if(Components.IsValid())
 		{
@@ -312,7 +314,10 @@ public class ComponentManager implements Runnable {
 			Method createTopology = topologyClass.getMethod("CreateTopology");
 			Topology components = (Topology) createTopology.invoke(topologyObject);
 			if(components.IsValid())
+			{
 				m_hTopologyList.put(TopologyName,components );
+				m_oLogger.Info("Put topology in hash : " + TopologyName);
+			}
 			else
 				m_oLogger.Error("No topology object retrieved");
 		} catch (NoSuchMethodException e) {
