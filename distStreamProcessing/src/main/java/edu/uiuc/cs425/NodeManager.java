@@ -95,6 +95,7 @@ public class NodeManager implements Runnable{
 		m_hTaskMap 					= new HashMap<String, TaskManager>();
 		m_hClusterInfo 				= new HashMap<String, String>();
 		m_hTopologyList 			= new HashMap<String, Topology>();
+		m_OutputTupleBucket         = new HashMap<String, Queue<Tuple>>();
 		m_oMutexOutputTuple 		= new ReentrantLock(true);
 		m_hClusterInfoLock          = new ReentrantLock(true);
 		try {
@@ -599,6 +600,7 @@ public class NodeManager implements Runnable{
 
 			// get the keys
 			Set<String> sIPs = m_OutputTupleBucket.keySet();
+			if( sIPs != null) {
 			// iterate through the keysq
 			for (String sIP : sIPs) {
 				// send list of tuples to the other node
@@ -626,6 +628,7 @@ public class NodeManager implements Runnable{
 						}
 					}
 				}
+			}
 			}
 
 			m_oMutexOutputTuple.unlock();
