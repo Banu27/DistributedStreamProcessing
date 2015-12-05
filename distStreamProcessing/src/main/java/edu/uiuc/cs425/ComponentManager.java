@@ -504,6 +504,7 @@ public class ComponentManager implements Runnable {
 		
 		m_oLogger.Info("Config accessor and logger initialized successfully!");
 		
+
 		String hostIP = null;
 		try {
 			hostIP = InetAddress.getLocalHost().getHostAddress();
