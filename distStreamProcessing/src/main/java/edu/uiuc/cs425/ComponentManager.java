@@ -282,12 +282,12 @@ public class ComponentManager implements Runnable {
 				}
 
 			}
+			m_WorkerListLock.unlock();
 		} catch (TException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
-			m_WorkerListLock.unlock();
 		}
+		
 	}
 
 	private void RetrieveTopologyComponents(String pathToJar, String TopologyName) // (Thrift)
