@@ -93,37 +93,6 @@ public class ComponentManager implements Runnable {
 
 	}
 
-	/*
-	public void Initialize(String jarFileDir, String ZKConnectionIP, Logger oLogger, ConfigAccessor oConfig,
-			ZooKeeperWrapper oZooKeeper) {
-		m_oConfig = oConfig;
-		m_nNextAssignableWorker = 0;
-		m_sZooKeeperConnectionIP = ZKConnectionIP;
-		m_oZooKeeperWrapper = oZooKeeper;
-		m_oLogger = oLogger;
-		// This needs to be assigned
-		m_sJarFilesDir = jarFileDir;
-		try {
-			m_oZooKeeperWrapper.create(new String("/Topologies"), new String("Consists of all topologies"),
-					createNodeCallback);
-			m_oZooKeeperWrapper.create(new String("/Workers"), new String("Consists of all workers"),
-					createNodeCallback);
-			m_oZooKeeperWrapper.getChildren("/Workers", workersChangeWatcher, workersGetChildrenCallback, null);
-		} catch (IllegalStateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
- */
 	public void AdmitNewWorker(String IP) // (Thrift)
 	{
 		// m_lWorkersList.add(new String(IP + String.valueOf(GetMyLocalTime())))
@@ -162,12 +131,10 @@ public class ComponentManager implements Runnable {
 				// MIGHT NEED TO FILL THIS
 				break;
 			case OK:
-				m_oLogger.Info("Created node");
-
+				m_oLogger.Info("Created node : " + path);
 				break;
 			case NODEEXISTS:
 				m_oLogger.Warning("ZNode already registered: " + path);
-
 				break;
 			default:
 				m_oLogger.Error("Something went wrong: " + path);
@@ -176,29 +143,29 @@ public class ComponentManager implements Runnable {
 	};
 
 	
-	ByteBuffer GetJar(String topology)
+	public ByteBuffer GetJar(String topology)
 	{
 		String file = m_sJarFilesDir + "/" + topology + ".jar";
 		FileInputStream fIn;
-	    FileChannel fChan;
-	    long fSize;
-	    ByteBuffer mBuf = null;
+		FileChannel fChan;
+		long fSize;
+		ByteBuffer mBuf = null;
 
-	    try {
-	      fIn = new FileInputStream(file);
-	      fChan = fIn.getChannel();
-	      fSize = fChan.size();
-	      mBuf = ByteBuffer.allocate((int) fSize);
-	      fChan.read(mBuf);
-	      mBuf.rewind();
-	      fChan.close(); 
-	      fIn.close(); 
-	    } catch (IOException exc) {
-	      System.out.println(exc);
-	      System.exit(1);
-	    }
-	    
-	    return mBuf;
+		try {
+			fIn = new FileInputStream(file);
+			fChan = fIn.getChannel();
+			fSize = fChan.size();
+			mBuf = ByteBuffer.allocate((int) fSize);
+			fChan.read(mBuf);
+			mBuf.rewind();
+			fChan.close(); 
+			fIn.close(); 
+		} catch (IOException exc) {
+			System.out.println(exc);
+			System.exit(1);
+		}
+
+		return mBuf;
 	}
 	
 	
@@ -350,7 +317,6 @@ public class ComponentManager implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 		catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
