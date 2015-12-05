@@ -70,7 +70,7 @@ public class CraneClient {
 	    }
 	    
 		try {
-			masterProxy.ReceiveJobFromClient(args[1], mBuf);
+			masterProxy.ReceiveJobFromClient(args[1], mBuf, args[2]);
 		} catch (TException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

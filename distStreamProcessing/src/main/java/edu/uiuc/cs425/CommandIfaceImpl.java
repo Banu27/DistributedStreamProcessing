@@ -33,8 +33,8 @@ public class CommandIfaceImpl implements Iface {
 
 
 
-		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile) throws TException {
-			m_oComponentManager.ReceiveNewJob(Jarfile, TopologyName);	
+		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile, String JarFileName) throws TException {
+			m_oComponentManager.ReceiveNewJob(Jarfile, TopologyName, JarFileName);	
 		}
 
 

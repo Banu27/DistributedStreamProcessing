@@ -238,9 +238,11 @@ public class ComponentManager implements Runnable {
 		return Commons.SUCCESS;
 	}
 
-	public void ReceiveNewJob(ByteBuffer file, String topologyName) {
+	public void ReceiveNewJob(ByteBuffer file, String topologyName, String jarFileName) {
 		// Client has to give the file here after converting to bytebuffer
-		String filename = m_sJarFilesDir + "/" + topologyName + ".jar";
+		String[] splitstring = (jarFileName.split("/"));
+		jarFileName = splitstring[splitstring.length-1];
+		String filename = m_sJarFilesDir + "/" + jarFileName + ".jar";
 		WriteFileIntoDir(file, filename);
 		RetrieveTopologyComponents(filename, topologyName);
 		// Send jars to all the workers.
@@ -295,7 +297,7 @@ public class ComponentManager implements Runnable {
 		try {
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
-
+			
 			TopologyName = TopologyName.replace('/', '.');
 			Class<?> topologyClass = cl.loadClass(TopologyName);
 			Object topologyObject = topologyClass.newInstance();

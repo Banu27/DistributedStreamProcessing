@@ -55,8 +55,8 @@ public class CommandIfaceProxy implements Iface{
 			}
 		}
 
-		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile) throws TException {
-			m_oClient.ReceiveJobFromClient(TopologyName, Jarfile);
+		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile, String jarFileName) throws TException {
+			m_oClient.ReceiveJobFromClient(TopologyName, Jarfile, jarFileName);
 			
 		}
 
