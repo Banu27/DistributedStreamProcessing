@@ -252,9 +252,7 @@ public class ComponentManager implements Runnable {
 		}
 		m_WorkerListLock.unlock();
 		
-	}
-
-	
+	}	
 
 	public int WriteFileIntoDir(ByteBuffer file, String filename) {
 		FileOutputStream fos;
@@ -485,9 +483,11 @@ public class ComponentManager implements Runnable {
 	public static void main(String[] args) {
 		if (args.length != 1) {
 			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.NodeManager <xml_path>");
-			System.exit(Commons.FAILURE);
+			//System.exit(Commons.FAILURE);
 		}
-		String sXML = args[0];
+		///Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml
+		//String sXML = args[0];
+		String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
 		final ConfigAccessor m_oConfig = new ConfigAccessor();
 
 		// instantiate logger and config accessor
@@ -501,6 +501,9 @@ public class ComponentManager implements Runnable {
 			System.out.println("Failed to Initialize logger object");
 			System.exit(Commons.FAILURE);
 		}
+		
+		m_oLogger.Info("Config accessor and logger initialized successfully!");
+		
 
 		String hostIP = null;
 		try {
@@ -515,15 +518,20 @@ public class ComponentManager implements Runnable {
 			System.out.println("host IP not same as the master IP in ");
 			System.exit(Commons.FAILURE);
 		}
+		
+		
 		// init component manager
 		ComponentManager compManager = new ComponentManager();
 		compManager.Initialize(m_oConfig, m_oLogger);
-		
+
+		m_oLogger.Info("Component Manager is up");
 		// start the thrift service
 
 		final CommandIfaceImpl m_oCommandImpl = new CommandIfaceImpl();
 		m_oCommandImpl.Initialize(compManager, null);
+		
 		Thread 					m_oCmdServThread;
+		
 		m_oCmdServThread = new Thread(new Runnable() {           
             public void run() { 
             	try {
@@ -542,6 +550,8 @@ public class ComponentManager implements Runnable {
         		return;
         	} 
         });
+		
+		m_oLogger.Info("CommandImpl set up");
 		m_oCmdServThread.start();
 		
 		// start the master thread that looks ping-acks the workers
