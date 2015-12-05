@@ -21,6 +21,11 @@ public class Topology {
 		return topology;
 	}
 	
+	public Boolean IsValid()
+	{
+		return !topology.isEmpty();
+	}
+	
 	public int	GetParallelismLevel(String componentName)
 	{
 		return topology.get(componentName).getParallelismLevel();
