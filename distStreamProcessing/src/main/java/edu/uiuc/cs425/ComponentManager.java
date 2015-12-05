@@ -252,42 +252,46 @@ public class ComponentManager implements Runnable {
 
 	void StartComponentsAtNodes(String TopologyName, String pathToJar) {
 		Topology Components = m_hTopologyList.get(TopologyName);
-
-		try {
-			Set<String> ComponentNames = Components.GetKeys();
-			Iterator<String> iterator = ComponentNames.iterator();
-			m_WorkerListLock.lock();
-			while (iterator.hasNext()) {
-				String compName = iterator.next();
-				for (int i = 0; i < Components.GetParallelismLevel(compName); i++) {
-					// Call the start task at the worker
-					CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();
-					int nodeIndex = m_nNextAssignableWorker % m_lWorkersList.size();
-					m_nNextAssignableWorker++;
-					if (Commons.SUCCESS == ProxyTemp.Initialize(
-							m_lWorkersList.get(nodeIndex),
-							m_nCommandServicePort, m_oLogger)) {
-						ProxyTemp.CreateTask(compName, TopologyName, i);
-						String taskString = TopologyName + ":" + compName + ":" + Integer.toString(i);
-						if( m_IPtoTaskString.containsKey(m_lWorkersList.get(nodeIndex)))
-						{
-							m_IPtoTaskString.get(m_lWorkersList.get(nodeIndex)).add(taskString);
-						} else {
-							ArrayList<String> newList = new ArrayList<String>();
-							newList.add(taskString);
-							m_IPtoTaskString.put(m_lWorkersList.get(nodeIndex), newList);
+		m_oLogger.Info("Ready to start components at nodes");
+		if(Components.IsValid())
+		{
+			try {
+				Set<String> ComponentNames = Components.GetKeys();
+				Iterator<String> iterator = ComponentNames.iterator();
+				m_WorkerListLock.lock();
+				while (iterator.hasNext()) {
+					String compName = iterator.next();
+					for (int i = 0; i < Components.GetParallelismLevel(compName); i++) {
+						// Call the start task at the worker
+						CommandIfaceProxy ProxyTemp = new CommandIfaceProxy();
+						int nodeIndex = m_nNextAssignableWorker % m_lWorkersList.size();
+						m_nNextAssignableWorker++;
+						if (Commons.SUCCESS == ProxyTemp.Initialize(
+								m_lWorkersList.get(nodeIndex),
+								m_nCommandServicePort, m_oLogger)) {
+							ProxyTemp.CreateTask(compName, TopologyName, i);
+							String taskString = TopologyName + ":" + compName + ":" + Integer.toString(i);
+							if( m_IPtoTaskString.containsKey(m_lWorkersList.get(nodeIndex)))
+							{
+								m_IPtoTaskString.get(m_lWorkersList.get(nodeIndex)).add(taskString);
+							} else {
+								ArrayList<String> newList = new ArrayList<String>();
+								newList.add(taskString);
+								m_IPtoTaskString.put(m_lWorkersList.get(nodeIndex), newList);
+							}
 						}
+
 					}
 
 				}
-
+				m_WorkerListLock.unlock();
+			} catch (TException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			m_WorkerListLock.unlock();
-		} catch (TException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-		
+		else
+			m_oLogger.Error("Invalid topology");
 	}
 
 	private void RetrieveTopologyComponents(String pathToJar, String TopologyName) // (Thrift)
