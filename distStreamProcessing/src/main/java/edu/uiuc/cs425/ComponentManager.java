@@ -304,7 +304,11 @@ public class ComponentManager implements Runnable {
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
-			m_hTopologyList.put(TopologyName, (Topology) createTopology.invoke(topologyObject));
+			Topology components = (Topology) createTopology.invoke(topologyObject);
+			if(components.IsValid())
+				m_hTopologyList.put(TopologyName,components );
+			else
+				m_oLogger.Error("No topology object retrieved");
 		} catch (NoSuchMethodException e) {
 			// TODO Auto-generated catch block
 			System.out.println("Create Topology method not present. Aborting!!");
