@@ -282,11 +282,12 @@ public class NodeManager implements Runnable{
 			}
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
-			String[] topologyZkName = topologyName.split("/");
+			//String[] topologyZkName = topologyName.split("/");
 			topologyName = topologyName.replace('/', '.');
 			m_oLogger.Info("Retrieving topology : " + topologyName);
 			System.out.println("Retrieving topology : " + topologyName);
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
+			String topologyZkname = componentsTopology.sTopologyName;
 			if(componentsTopology.IsValid())
 			{	System.out.println("Valid topology found");
 				String classname = "edu.uiuc.cs425."+componentsTopology.Get(compName).getClassName();
@@ -297,14 +298,14 @@ public class NodeManager implements Runnable{
 				TaskManager task = new TaskManager();
 				
 				//String[] tokens= topologyName.split(".");
-				System.out.println("topology name is : " + topologyName);
+				System.out.println("topology name is : " + topologyZkname);
 				//System.out.println("token length is : " + String.valueOf(tokens.length));
 				//for(String tok : tokens)
 				//{
 				//	System.out.println(tok);
 				//}
 				
-				String key_ = "/Topologies/"+topologyZkName[3] + ":" + compName + ":" + Integer.toString(instanceId);
+				String key_ = "/Topologies/"+topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
