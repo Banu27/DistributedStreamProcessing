@@ -425,6 +425,8 @@ public class NodeManager implements Runnable{
 		// add the source information to the tuple
 		tuple.SetSrcFieldInfo(task.m_sJobname, task.m_sComponentName, task.m_nInstanceId);
 		// add to disruptor queue
+		System.out.println("Received tuple from task " + task.m_sJobname + ":" +
+				task.m_sComponentName + ":" + Integer.toString(task.m_nInstanceId));
 		m_oOutputTupleQ.WriteData(tuple);
 	}
 

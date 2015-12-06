@@ -127,7 +127,7 @@ public class DisruptorWrapper {
 	private IBolt 					m_oBolt;
 	private TupleEventProducer		m_oProducer;
 	private NodeManager 			m_oNM;
-	
+	private String                  m_sName;
 	
 	private Disruptor<TupleEvent>   m_oDisruptor;
 	
@@ -161,6 +161,7 @@ public class DisruptorWrapper {
         RingBuffer<TupleEvent> ringBuffer = m_oDisruptor.getRingBuffer();
 
         m_oProducer = new TupleEventProducer(ringBuffer);
+        m_sName = "Bolt input queue";
 	}
 	
 	// init for nodeinput disruptor
@@ -185,7 +186,7 @@ public class DisruptorWrapper {
         RingBuffer<TupleEvent> ringBuffer = m_oDisruptor.getRingBuffer();
 
         m_oProducer = new TupleEventProducer(ringBuffer);
-
+        m_sName = "Node input queue";
 	}
 	
 	
@@ -211,13 +212,14 @@ public class DisruptorWrapper {
         RingBuffer<TupleEvent> ringBuffer = m_oDisruptor.getRingBuffer();
 
         m_oProducer = new TupleEventProducer(ringBuffer);
-
+        m_sName = "Node output queue";
 	}
 	
 	
 	public void WriteData(Tuple tuple)
 	{
 		m_oProducer.onData(tuple);
+		System.out.println("Writing data to disruptor: " + m_sName);
 	}
 	
 	public void close()

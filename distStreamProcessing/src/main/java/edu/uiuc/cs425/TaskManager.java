@@ -16,6 +16,11 @@ public class TaskManager implements Runnable {
 		m_oDisruptor = null;
 	}
 	
+	public int GetInstance()
+	{
+		return m_nInstanceId;
+	}
+	
 	public void Init(String jobName, String compName, int id, IBolt obj, NodeManager oNM)
 	{
 		m_sJobname 				= jobName;

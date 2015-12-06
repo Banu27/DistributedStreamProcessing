@@ -13,5 +13,10 @@ public class BComponent {
 	{
 		m_oTaskMgr = task;
 	}
+	
+	public int getInstance()
+	{
+		return m_oTaskMgr.GetInstance();
+	}
 }
 
