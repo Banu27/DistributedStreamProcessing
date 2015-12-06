@@ -288,6 +288,7 @@ public class NodeManager implements Runnable{
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
 			if(componentsTopology.IsValid())
 			{	String classname = componentsTopology.Get(compName).getClassName();
+				classname = "edu.uiuc.cs425."+classname;
 				m_oLogger.Info("Class name retrieved : " + classname);
 				Class<?> componentClass = cl.loadClass(classname);
 			
