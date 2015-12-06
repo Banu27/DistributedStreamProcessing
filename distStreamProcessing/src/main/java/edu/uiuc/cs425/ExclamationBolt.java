@@ -2,11 +2,11 @@ package edu.uiuc.cs425;
 
 import java.util.Date;
 
-public class ExclaimationBolt extends BComponent implements IBolt {
+public class ExclamationBolt extends BComponent implements IBolt {
 	
 	private Date   date;
 	
-	public ExclaimationBolt()
+	public ExclamationBolt()
 	{
 		date = new Date();
 	}

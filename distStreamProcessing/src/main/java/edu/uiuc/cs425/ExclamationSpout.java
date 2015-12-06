@@ -3,13 +3,13 @@ package edu.uiuc.cs425;
 import java.util.Random;
 import java.util.Date;
 
-public class ExclaimationSpout extends BComponent implements ISpout {
+public class ExclamationSpout extends BComponent implements ISpout {
 	
 	private Random _rand;
 	private Date   date;
 	private long wordCounter;
 	
-	public ExclaimationSpout()
+	public ExclamationSpout()
 	{
 		wordCounter = 0;
 		date = new Date();
