@@ -51,6 +51,7 @@ public class DisruptorWrapper {
 
 	    public void onEvent(TupleEvent tupleEvent, long sequence, boolean endOfBatch) throws Exception {
 	        if (tupleEvent != null && tupleEvent.get() != null) {
+	        	System.out.println("Received tuple at bolt");
 	        	Tuple tuple = tupleEvent.get();
 	            m_oBolt.execute(tuple);
 	        }
@@ -69,6 +70,7 @@ public class DisruptorWrapper {
 
 	    public void onEvent(TupleEvent tupleEvent, long sequence, boolean endOfBatch) throws Exception {
 	        if (tupleEvent != null && tupleEvent.get() != null) {
+	        	System.out.println("Received tuple at Node input");
 	        	Tuple tuple = tupleEvent.get();
 	        	m_oNM.SendTupleToTask(tuple);	        	
 	        }
@@ -88,9 +90,11 @@ public class DisruptorWrapper {
 	    public void onEvent(TupleEvent tupleEvent, long sequence, boolean endOfBatch) throws Exception {
 	        if (tupleEvent != null && tupleEvent.get() != null) {
 	        	Tuple tuple = tupleEvent.get();
+	        	System.out.println("Received tuple at Node output");
 	        	// the tuple should go to the nodemanager and 
 	        	// forwarded to the method that decides where the 
 	        	// next stop of the tuple is.
+	        	
 	        	m_oNodeMgr.SendToNextComponent(tuple);
 	        }
 	    }
