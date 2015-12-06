@@ -573,6 +573,7 @@ public class NodeManager implements Runnable{
 		m_oMutexOutputTuple.lock();
 		for (int i = 0; i < tuples.size(); ++i) {
 			String sIP = GetNextNode(tuples.get(i));
+			System.out.println("next destination of tuple is " + sIP);
 			if(sIP == null) continue;
 			Queue<Tuple> queue = m_OutputTupleBucket.get(sIP);
 			if (queue == null)
