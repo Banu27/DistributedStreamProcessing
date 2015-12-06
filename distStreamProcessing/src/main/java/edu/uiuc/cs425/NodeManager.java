@@ -284,9 +284,11 @@ public class NodeManager implements Runnable{
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			topologyName = topologyName.replace('/', '.');
 			m_oLogger.Info("Retrieving topology : " + topologyName);
+			System.out.println("Retrieving topology : " + topologyName);
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
 			if(componentsTopology.IsValid())
-			{	String classname = "edu.uiuc.cs425."+componentsTopology.Get(compName).getClassName();
+			{	System.out.println("Valid topology found");
+				String classname = "edu.uiuc.cs425."+componentsTopology.Get(compName).getClassName();
 				m_oLogger.Info("Class name retrieved : " + classname);
 				Class<?> componentClass = cl.loadClass(classname);
 			
