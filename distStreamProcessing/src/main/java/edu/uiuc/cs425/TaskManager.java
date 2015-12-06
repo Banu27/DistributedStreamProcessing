@@ -49,13 +49,14 @@ public class TaskManager implements Runnable {
 		BComponent comp = (BComponent)m_oSpout;
 		comp.SetTaskManager(this);
 		m_SpoutThread 			= new Thread(this);
-		m_SpoutThread.start();
+		
 
 	}
 	
 	public void Start()
 	{
-		m_SpoutThread.start();
+		if(m_oSpout != null)
+			m_SpoutThread.start();
 	}
 	
 	// this call is made by spout/bolt when they emit tuples. the emit impl is in the BComponent class

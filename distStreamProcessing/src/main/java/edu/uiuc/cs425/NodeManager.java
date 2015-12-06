@@ -18,8 +18,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
@@ -255,19 +257,23 @@ public class NodeManager implements Runnable{
 		}
 	};
 	
-	public void ReceiveTopology(ByteBuffer jar, String topologyName) 
+	public void StartTopology(String sTopology)
 	{
-		String pathToJar = m_sJarFilesDir + '/' + topologyName + ".jar";
-		WriteFileIntoDir(jar, pathToJar);
-		RetrieveTopologyComponents(pathToJar, topologyName);
-		// Send jars to all the workers.
+		for (String key_ : m_hTaskMap.keySet()) {
+			if(key_.contains(sTopology))
+			{
+				m_hTaskMap.get(key_).Start();
+			}
+		}
+
 	}
 
-	public void CreateTask(String compName, int instanceId, String topologyName, String pathToJar) {
+	public void CreateTask(String compName, int instanceId, String topologyName, String fullClassName) {
 		try {
 			//String pathToJar = m_sJarFilesDir + "/" + topologyName + ".jar";
 			// check if file is available, else request file from master
 			m_oLogger.Info("Creating task in NM");
+			String pathToJar = m_sJarFilesDir + "/" + topologyName  +".jar";
 			File f = new File(pathToJar);
 			if(!f.exists()) { 
 				ByteBuffer buf = null;
@@ -279,18 +285,17 @@ public class NodeManager implements Runnable{
 				}
 				WriteFileIntoDir(buf,pathToJar);
 			}
-			RetrieveTopologyComponents(pathToJar, topologyName);
+			RetrieveTopologyComponents(pathToJar, topologyName,fullClassName);
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			//String[] topologyZkName = topologyName.split("/");
-			topologyName = topologyName.replace('/', '.');
 			m_oLogger.Info("Retrieving topology : " + topologyName);
 			System.out.println("Retrieving topology : " + topologyName);
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
 			String topologyZkname = componentsTopology.sTopologyName;
 			if(componentsTopology.IsValid())
 			{	System.out.println("Valid topology found");
-				String classname = "edu.uiuc.cs425."+componentsTopology.Get(compName).getClassName();
+				String classname = componentsTopology.Get(compName).getClassName();
 				m_oLogger.Info("Class name retrieved : " + classname);
 				Class<?> componentClass = cl.loadClass(classname);
 			
@@ -436,7 +441,7 @@ public class NodeManager implements Runnable{
 	// - wait to add all the tasks)
 
 	@SuppressWarnings("unchecked")
-	private void RetrieveTopologyComponents(String pathToJar, String TopologyName) // (Thrift)
+	private void RetrieveTopologyComponents(String pathToJar, String TopologyName, String fullClassName) // (Thrift)
 	{
 		// Get the topology from the jar.
 		// Receive the parallelism level
@@ -445,8 +450,8 @@ public class NodeManager implements Runnable{
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 
-			TopologyName = TopologyName.replace('/', '.');
-			Class<?> topologyClass = cl.loadClass(TopologyName);
+			fullClassName = fullClassName.replace('/', '.');
+			Class<?> topologyClass = cl.loadClass(fullClassName);
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
