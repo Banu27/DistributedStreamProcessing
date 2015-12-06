@@ -279,6 +279,7 @@ public class NodeManager implements Runnable{
 					e.printStackTrace();
 				}
 				WriteFileIntoDir(buf,pathToJar);
+				RetrieveTopologyComponents(pathToJar, topologyName);
 			}
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
