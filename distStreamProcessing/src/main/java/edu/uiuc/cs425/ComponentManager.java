@@ -468,7 +468,7 @@ Topology Components = m_hTopologyList.get(TopologyName);
 	// this method starts the streaming master
 	public static void main(String[] args) {
 		if (args.length != 1) {
-			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.NodeManager <xml_path>");
+			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.ComponentManager <xml_path>");
 			System.exit(Commons.FAILURE);
 		}
 		///Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml
