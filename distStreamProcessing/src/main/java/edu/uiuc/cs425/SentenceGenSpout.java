@@ -13,7 +13,7 @@ public class SentenceGenSpout extends BComponent implements ISpout {
 	}
 	
 	public void nextTuple() {
-		Commons.sleep(10000);
+		Commons.sleep(100);
 		String[] sentences = new String[]{ "the cow jumped over the moon", "an apple a day keeps the doctor away",
 		        "four score and seven years ago", "snow white and the seven dwarfs", "i am at two with nature" };
 		
