@@ -304,7 +304,7 @@ public class NodeManager implements Runnable{
 				TaskManager task = new TaskManager();
 				//String[] tokens= topologyName.split(".");
 				System.out.println("topology name is : " + topologyZkname);
-				String key_ = "/Topologies/"+topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
+				String key_ = topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
@@ -318,8 +318,8 @@ public class NodeManager implements Runnable{
 				
 				}
 				
-				m_oZooKeeper.create(key_,m_sNodeIP,createNodeCallback);
-				m_oZooKeeper.getData(key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
+				m_oZooKeeper.create("/Topologies/" + key_,m_sNodeIP,createNodeCallback);
+				m_oZooKeeper.getData("/Topologies/" + key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
 			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
 			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			}
