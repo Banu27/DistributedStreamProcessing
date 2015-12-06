@@ -244,7 +244,7 @@ public class ComponentManager implements Runnable {
 	// topologyName is the full class name
 	public void ReceiveNewJob(ByteBuffer file, String topologyName) {
 		// Client has to give the file here after converting to bytebuffer
-		String[] splitstring = (topologyName.split("."));
+		String[] splitstring = (topologyName.split("\\."));
 		String sShortTopologyName = splitstring[splitstring.length - 1];
 		m_hTopologyPackageName.put(sShortTopologyName, topologyName);
 		String filename = m_sJarFilesDir + "/" + sShortTopologyName + ".jar";
