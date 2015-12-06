@@ -303,7 +303,7 @@ public class NodeManager implements Runnable{
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
 					IBolt bolt = (IBolt) componentClass.newInstance();
-				task.Init(topologyName, compName, instanceId, bolt, this);
+					task.Init(topologyName, compName, instanceId, bolt, this);
 				}
 				else
 				{

@@ -38,6 +38,9 @@ public class TaskManager implements Runnable {
 		m_nInstanceId			= id;
 		m_oSpout				= obj;
 		m_oNM					= oNM;
+		// cast to Bcomponents and set task manager
+		BComponent comp = (BComponent)m_oSpout;
+		comp.SetTaskManager(this);
 		m_SpoutThread 			= new Thread(this);
 		m_SpoutThread.start();
 
