@@ -108,6 +108,7 @@ public class NodeManager implements Runnable{
 		m_lWorkerIPs = new ArrayList<String>();
 		m_oZooKeeper = new ZooKeeperWrapper();
 		m_oMasterProxy = new CommandIfaceProxy();
+		m_hIPtoProxy =  new HashMap<String, CommandIfaceProxy>();
 	}
 
 
