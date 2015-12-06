@@ -290,9 +290,6 @@ public class NodeManager implements Runnable{
 			{	String classname = componentsTopology.Get(compName).getClassName();
 				Class<?> componentClass = cl.loadClass(classname);
 			
-			String classname = m_hTopologyList.get(topologyName).Get(compName).getClassName();
-			Class<?> componentClass = cl.loadClass(classname);
-
 			// there are two possible components - spout and bolt
 				TaskManager task = new TaskManager();
 				String key_ = topologyName + ":" + compName + ":" + Integer.toString(instanceId);
