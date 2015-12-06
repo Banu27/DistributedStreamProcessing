@@ -296,6 +296,8 @@ public class NodeManager implements Runnable{
 				TaskManager task = new TaskManager();
 				
 				String[] tokens= topologyName.split(".");
+				System.out.println("topology name is : " + topologyName);
+				System.out.println(tokens[tokens.length-1]);
 				String key_ = "/Topologies/"+tokens[tokens.length-1] + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
