@@ -504,7 +504,7 @@ public class NodeManager implements Runnable{
 		// get the next comp list
 		Topology topo = m_hTopologyList.get(tuple.m_sJobname);
 		ArrayList<String> nextComp = topo.GetNextComponents(sSrc);
-		if(nextComp.size() > 0)
+		if(nextComp!= null && nextComp.size() > 0)
 		{
 			// assign dest to the first tuple
 			String firtComp = nextComp.get(0);
