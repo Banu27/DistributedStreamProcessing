@@ -282,6 +282,7 @@ public class NodeManager implements Runnable{
 			}
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
+			String[] topologyZkName = topologyName.split("/");
 			topologyName = topologyName.replace('/', '.');
 			m_oLogger.Info("Retrieving topology : " + topologyName);
 			System.out.println("Retrieving topology : " + topologyName);
@@ -295,7 +296,7 @@ public class NodeManager implements Runnable{
 			// there are two possible components - spout and bolt
 				TaskManager task = new TaskManager();
 				
-				String[] tokens= topologyName.split(".");
+				//String[] tokens= topologyName.split(".");
 				System.out.println("topology name is : " + topologyName);
 				//System.out.println("token length is : " + String.valueOf(tokens.length));
 				//for(String tok : tokens)
@@ -303,7 +304,7 @@ public class NodeManager implements Runnable{
 				//	System.out.println(tok);
 				//}
 				
-				String key_ = "/Topologies/"+tokens[3] + ":" + compName + ":" + Integer.toString(instanceId);
+				String key_ = "/Topologies/"+topologyZkName[3] + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
