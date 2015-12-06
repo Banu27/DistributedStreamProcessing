@@ -293,7 +293,7 @@ public class NodeManager implements Runnable{
 			
 			// there are two possible components - spout and bolt
 				TaskManager task = new TaskManager();
-				String key_ = topologyName + ":" + compName + ":" + Integer.toString(instanceId);
+				String key_ = "/Topologies/"+topologyName + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
