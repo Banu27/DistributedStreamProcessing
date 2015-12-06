@@ -162,7 +162,8 @@ public class NodeManager implements Runnable{
 	
 	public void UpdateClusterInfo(String zNodePath)
 	{
-		zNodePath = zNodePath.replace('/', ':');
+		//zNodePath = zNodePath.replace('/', ':');
+		//zNodePath[0] = '/';
 		try {
 			String data = m_oZooKeeper.read(zNodePath);
 			m_hClusterInfoLock.lock();
@@ -278,8 +279,8 @@ public class NodeManager implements Runnable{
 					e.printStackTrace();
 				}
 				WriteFileIntoDir(buf,pathToJar);
-				RetrieveTopologyComponents(pathToJar, topologyName);
 			}
+			RetrieveTopologyComponents(pathToJar, topologyName);
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			//String[] topologyZkName = topologyName.split("/");
@@ -296,15 +297,8 @@ public class NodeManager implements Runnable{
 			
 			// there are two possible components - spout and bolt
 				TaskManager task = new TaskManager();
-				
 				//String[] tokens= topologyName.split(".");
 				System.out.println("topology name is : " + topologyZkname);
-				//System.out.println("token length is : " + String.valueOf(tokens.length));
-				//for(String tok : tokens)
-				//{
-				//	System.out.println(tok);
-				//}
-				
 				String key_ = "/Topologies/"+topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
