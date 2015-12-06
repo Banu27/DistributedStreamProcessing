@@ -170,6 +170,8 @@ public class NodeManager implements Runnable{
 			{
 				m_hClusterInfo.put(zNodePath, data);
 			}
+			m_hClusterInfoLock.unlock();
+			
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -179,10 +181,7 @@ public class NodeManager implements Runnable{
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
-			m_hClusterInfoLock.unlock();
-		}
-		
+		} 
 	}
 
 	public void UpdateClusterInfo()
@@ -293,7 +292,9 @@ public class NodeManager implements Runnable{
 			
 			// there are two possible components - spout and bolt
 				TaskManager task = new TaskManager();
-				String key_ = "/Topologies/"+topologyName + ":" + compName + ":" + Integer.toString(instanceId);
+				
+				String[] tokens= topologyName.split(".");
+				String key_ = "/Topologies/"+tokens[tokens.length-1] + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
@@ -306,7 +307,7 @@ public class NodeManager implements Runnable{
 					task.Init(topologyName, compName, instanceId, spout, this);
 				
 				}
-			
+				
 				m_oZooKeeper.create(key_,m_sNodeIP,createNodeCallback);
 				m_oZooKeeper.getData(key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
 			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
