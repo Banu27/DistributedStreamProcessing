@@ -166,8 +166,9 @@ public class NodeManager implements Runnable{
 		//zNodePath[0] = '/';
 		try {
 			String data = m_oZooKeeper.read(zNodePath);
+			String [] tokens = zNodePath.split("/");
 			m_hClusterInfoLock.lock();
-			if(!m_hClusterInfo.get(zNodePath).equals(data))
+			if(!m_hClusterInfo.get(tokens[tokens.length-1]).equals(data))
 			{
 				m_hClusterInfo.put(zNodePath, data);
 			}
