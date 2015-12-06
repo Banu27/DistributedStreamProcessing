@@ -278,7 +278,7 @@ public class NodeManager implements Runnable{
 			if(!f.exists()) { 
 				ByteBuffer buf = null;
 				try {
-					buf = m_oMasterProxy.GetJarFromMaster(pathToJar);
+					buf = m_oMasterProxy.GetJarFromMaster(topologyName);
 				} catch (TException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
