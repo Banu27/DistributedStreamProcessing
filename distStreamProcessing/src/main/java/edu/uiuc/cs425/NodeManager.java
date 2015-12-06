@@ -167,11 +167,9 @@ public class NodeManager implements Runnable{
 		try {
 			String data = m_oZooKeeper.read(zNodePath);
 			String [] tokens = zNodePath.split("/");
+			String compChild = tokens[tokens.length-1];
 			m_hClusterInfoLock.lock();
-			if(!m_hClusterInfo.get(tokens[tokens.length-1]).equals(data))
-			{
-				m_hClusterInfo.put(zNodePath, data);
-			}
+			m_hClusterInfo.put(compChild, data);
 			m_hClusterInfoLock.unlock();
 			
 		} catch (UnsupportedEncodingException e) {
