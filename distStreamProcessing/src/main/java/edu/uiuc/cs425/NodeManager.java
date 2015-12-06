@@ -288,6 +288,7 @@ public class NodeManager implements Runnable{
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
 			if(componentsTopology.IsValid())
 			{	String classname = componentsTopology.Get(compName).getClassName();
+				m_oLogger.Info("Class name retrieved : " + classname);
 				Class<?> componentClass = cl.loadClass(classname);
 			
 			// there are two possible components - spout and bolt

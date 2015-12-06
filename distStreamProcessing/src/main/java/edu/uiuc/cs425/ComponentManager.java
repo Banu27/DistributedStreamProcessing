@@ -243,7 +243,7 @@ public class ComponentManager implements Runnable {
 		// Client has to give the file here after converting to bytebuffer
 		String[] splitstring = (jarFileName.split("/"));
 		jarFileName = splitstring[splitstring.length-1];
-		String filename = m_sJarFilesDir + "/" + jarFileName + ".jar";
+		String filename = m_sJarFilesDir + "/" + jarFileName;
 		WriteFileIntoDir(file, filename);
 		RetrieveTopologyComponents(filename, topologyName);
 		// Send jars to all the workers.
