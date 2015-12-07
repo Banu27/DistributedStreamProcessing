@@ -506,7 +506,7 @@ public class NodeManager implements Runnable{
 				String sFieldValue = tuple.GetStringValue(sFieldType);
 				int hash = Commons.Hash(sFieldValue);
 				inst = hash%topo.Get(firtComp).getParallelismLevel();
-				System.out.println("Grouping_field inst " + Integer.toString(inst) );
+				//System.out.println("Grouping_field inst " + Integer.toString(inst) );
 				
 			} else {
 				inst = (int) (topo.Get(firtComp).nextTupleIndex() % 
