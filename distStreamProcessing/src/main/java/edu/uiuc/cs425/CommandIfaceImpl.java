@@ -24,6 +24,7 @@ public class CommandIfaceImpl implements Iface {
 		
 
 		public void TransferTupleToNode(int nTuples, List<ByteBuffer> tuples) throws TException {
+			System.out.println("Received " + Integer.toString(nTuples) + " tuples");
 			m_oNodeManager.ReceiveTuplesFromOutside(tuples);	
 		}
 
