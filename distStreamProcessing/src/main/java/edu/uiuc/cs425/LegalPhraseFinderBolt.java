@@ -60,7 +60,7 @@ public class LegalPhraseFinderBolt extends BComponent implements IBolt {
 				}
 			}
 			try {
-				m_oWriter.write(word + " : " + String.valueOf(count));
+				m_oWriter.write(word + " : " + String.valueOf(count) + "\n");
 				m_oWriter.flush();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
