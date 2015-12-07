@@ -9,7 +9,7 @@ public class TopologyComponent {
 	private int					m_nParallelismLevel;
 	private int					m_nCompType;
 	private String 				m_sFieldGroup;
-	private long				m_nCurrTupleCount;
+	private int					m_nCurrTupleCount;
 	
 	public TopologyComponent(String comp, String className, int compType, TopologyComponent parent, 
 			int type, String sField, int parLevel)
@@ -29,9 +29,10 @@ public class TopologyComponent {
 		return m_sFieldGroup;
 	}
 	
-	public long nextTupleIndex()
+	public int nextTupleIndex()
 	{
-		return m_nCurrTupleCount++ % 1000;
+		m_nCurrTupleCount = (m_nCurrTupleCount++) % 1000;
+		return m_nCurrTupleCount;
 	}
 	
 	public int getCompType()
