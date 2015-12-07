@@ -651,7 +651,7 @@ public class NodeManager implements Runnable{
 								m_oLogger.Error("unable to connect to worker to send tuples " + sIP);
 								continue;
 							}
-							
+							m_hIPtoProxy.put(sIP, prxy);
 						}
 						try {
 							prxy.TransferTupleToNode(serTuples.size(), serTuples);

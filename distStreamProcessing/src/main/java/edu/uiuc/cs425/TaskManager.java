@@ -16,6 +16,7 @@ public class TaskManager implements Runnable {
 		m_oDisruptor = null;
 		m_oBolt = null;
 		m_oSpout = null;
+		m_SpoutThread = null;
 	}
 	
 	public int GetInstance()
