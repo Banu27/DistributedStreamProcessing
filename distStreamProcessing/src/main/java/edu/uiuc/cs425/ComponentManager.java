@@ -42,6 +42,7 @@ public class ComponentManager implements Runnable {
 
 	private List<String> 							m_lWorkersList;
 	private HashMap<String, CommandIfaceProxy> 		m_hProxyCache;
+	private HashMap<String, String>                 m_hTopologyPackageName;
 	private Lock									m_WorkerListLock;
     private HashMap<String,ArrayList<String>>       m_IPtoTaskString;
 	private int 									m_nNextAssignableWorker;
@@ -61,6 +62,7 @@ public class ComponentManager implements Runnable {
 		m_hProxyCache = new HashMap<String, CommandIfaceProxy>();
 		m_IPtoTaskString = new HashMap<String, ArrayList<String>>();
 		m_hTopologyList = new HashMap<String, Topology>();
+		m_hTopologyPackageName = new HashMap<String, String>(); // continue here
 	}
 
 	public void Initialize(ConfigAccessor oAccess, Logger oLogger) {
@@ -144,9 +146,9 @@ public class ComponentManager implements Runnable {
 	};
 
 	
-	public ByteBuffer GetJarFromMaster(String file)
+	public ByteBuffer GetJarFromMaster(String topology)
 	{
-		//String file = m_sJarFilesDir + "/" + topology + ".jar";
+		String file = m_sJarFilesDir + "/" + topology + ".jar";
 		FileInputStream fIn;
 		FileChannel fChan;
 		long fSize;
@@ -239,22 +241,23 @@ public class ComponentManager implements Runnable {
 		return Commons.SUCCESS;
 	}
 
-	public void ReceiveNewJob(ByteBuffer file, String topologyName, String jarFileName) {
+	// topologyName is the full class name
+	public void ReceiveNewJob(ByteBuffer file, String topologyName) {
 		// Client has to give the file here after converting to bytebuffer
-		String[] splitstring = (jarFileName.split("/"));
-		jarFileName = splitstring[splitstring.length-1];
-		String filename = m_sJarFilesDir + "/" + jarFileName;
+		String[] splitstring = (topologyName.split("\\."));
+		String sShortTopologyName = splitstring[splitstring.length - 1];
+		m_hTopologyPackageName.put(sShortTopologyName, topologyName);
+		String filename = m_sJarFilesDir + "/" + sShortTopologyName + ".jar";
 		WriteFileIntoDir(file, filename);
-		RetrieveTopologyComponents(filename, topologyName);
+		RetrieveTopologyComponents(filename,sShortTopologyName, topologyName);
 		// Send jars to all the workers.
-		StartComponentsAtNodes(topologyName, filename);
+		StartComponentsAtNodes(sShortTopologyName, topologyName, filename);
 	}
 
-	void StartComponentsAtNodes(String TopologyName, String pathToJar) {
+	void StartComponentsAtNodes(String TopologyName, String fullClassName, String pathToJar) {
 		
-		TopologyName = TopologyName.replace('/','.');
 		m_oLogger.Info("Retrieving from hash : " + TopologyName);
-Topology Components = m_hTopologyList.get(TopologyName);
+		Topology Components = m_hTopologyList.get(TopologyName);
 		m_oLogger.Info("Ready to start components at nodes");
 		if(Components.IsValid())
 		{
@@ -274,7 +277,7 @@ Topology Components = m_hTopologyList.get(TopologyName);
 						if (Commons.SUCCESS == ProxyTemp.Initialize(
 								m_lWorkersList.get(nodeIndex),
 								m_nCommandServicePort, m_oLogger)) {
-							ProxyTemp.CreateTask(compName, TopologyName, i, pathToJar);
+							ProxyTemp.CreateTask(compName, TopologyName, fullClassName, i);
 							String taskString = TopologyName + ":" + compName + ":" + Integer.toString(i);
 							if( m_IPtoTaskString.containsKey(m_lWorkersList.get(nodeIndex)))
 							{
@@ -290,6 +293,22 @@ Topology Components = m_hTopologyList.get(TopologyName);
 
 				}
 				m_WorkerListLock.unlock();
+				
+				//sleep for a while to wait for all components to come up
+				Commons.sleep(500);
+				
+				// send startCommand
+				m_WorkerListLock.lock();
+				for(String ip: m_lWorkersList)
+				{
+					CommandIfaceProxy proxyTemp = new CommandIfaceProxy();
+					if (Commons.SUCCESS == proxyTemp.Initialize( ip,m_nCommandServicePort, m_oLogger))
+					{
+						proxyTemp.StartTopology(TopologyName);
+					}
+				}
+				m_WorkerListLock.unlock();
+				
 			} catch (TException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -299,7 +318,7 @@ Topology Components = m_hTopologyList.get(TopologyName);
 			m_oLogger.Error("Invalid topology");
 	}
 
-	private void RetrieveTopologyComponents(String pathToJar, String TopologyName) // (Thrift)
+	private void RetrieveTopologyComponents(String pathToJar, String TopologyName, String fullClassName) // (Thrift)
 	{
 		// Get the topology from the jar.
 		// Receive the parallelism level
@@ -308,8 +327,8 @@ Topology Components = m_hTopologyList.get(TopologyName);
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			
-			TopologyName = TopologyName.replace('/', '.');
-			Class<?> topologyClass = cl.loadClass(TopologyName);
+			fullClassName = fullClassName.replace('/', '.');
+			Class<?> topologyClass = cl.loadClass(fullClassName);
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
@@ -387,7 +406,8 @@ Topology Components = m_hTopologyList.get(TopologyName);
 						m_lWorkersList.get(nodeIndex),
 						m_nCommandServicePort, m_oLogger)) {
 					try {
-						ProxyTemp.CreateTask(tokens[1], tokens[0], Integer.parseInt(tokens[2]), m_hTopologyList.get(tokens[0]).getJarFilepath());
+						ProxyTemp.CreateTask(tokens[1], tokens[0], m_hTopologyPackageName.get(tokens[0]), 
+								Integer.parseInt(tokens[2]));
 					} catch (NumberFormatException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();

@@ -18,8 +18,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
@@ -106,6 +108,7 @@ public class NodeManager implements Runnable{
 		m_lWorkerIPs = new ArrayList<String>();
 		m_oZooKeeper = new ZooKeeperWrapper();
 		m_oMasterProxy = new CommandIfaceProxy();
+		m_hIPtoProxy =  new HashMap<String, CommandIfaceProxy>();
 	}
 
 
@@ -167,11 +170,9 @@ public class NodeManager implements Runnable{
 		try {
 			String data = m_oZooKeeper.read(zNodePath);
 			String [] tokens = zNodePath.split("/");
+			String compChild = tokens[tokens.length-1];
 			m_hClusterInfoLock.lock();
-			if(!m_hClusterInfo.get(tokens[tokens.length-1]).equals(data))
-			{
-				m_hClusterInfo.put(zNodePath, data);
-			}
+			m_hClusterInfo.put(compChild, data);
 			m_hClusterInfoLock.unlock();
 			
 		} catch (UnsupportedEncodingException e) {
@@ -257,42 +258,45 @@ public class NodeManager implements Runnable{
 		}
 	};
 	
-	public void ReceiveTopology(ByteBuffer jar, String topologyName) 
+	public void StartTopology(String sTopology)
 	{
-		String pathToJar = m_sJarFilesDir + '/' + topologyName + ".jar";
-		WriteFileIntoDir(jar, pathToJar);
-		RetrieveTopologyComponents(pathToJar, topologyName);
-		// Send jars to all the workers.
+		for (String key_ : m_hTaskMap.keySet()) {
+			if(key_.contains(sTopology))
+			{
+				m_hTaskMap.get(key_).Start();
+			}
+		}
+
 	}
 
-	public void CreateTask(String compName, int instanceId, String topologyName, String pathToJar) {
+	public void CreateTask(String compName, int instanceId, String topologyName, String fullClassName) {
 		try {
 			//String pathToJar = m_sJarFilesDir + "/" + topologyName + ".jar";
 			// check if file is available, else request file from master
 			m_oLogger.Info("Creating task in NM");
+			String pathToJar = m_sJarFilesDir + "/" + topologyName  +".jar";
 			File f = new File(pathToJar);
 			if(!f.exists()) { 
 				ByteBuffer buf = null;
 				try {
-					buf = m_oMasterProxy.GetJarFromMaster(pathToJar);
+					buf = m_oMasterProxy.GetJarFromMaster(topologyName);
 				} catch (TException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				WriteFileIntoDir(buf,pathToJar);
 			}
-			RetrieveTopologyComponents(pathToJar, topologyName);
+			RetrieveTopologyComponents(pathToJar, topologyName,fullClassName);
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			//String[] topologyZkName = topologyName.split("/");
-			topologyName = topologyName.replace('/', '.');
 			m_oLogger.Info("Retrieving topology : " + topologyName);
 			System.out.println("Retrieving topology : " + topologyName);
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
 			String topologyZkname = componentsTopology.sTopologyName;
 			if(componentsTopology.IsValid())
 			{	System.out.println("Valid topology found");
-				String classname = "edu.uiuc.cs425."+componentsTopology.Get(compName).getClassName();
+				String classname = componentsTopology.Get(compName).getClassName();
 				m_oLogger.Info("Class name retrieved : " + classname);
 				Class<?> componentClass = cl.loadClass(classname);
 			
@@ -300,12 +304,12 @@ public class NodeManager implements Runnable{
 				TaskManager task = new TaskManager();
 				//String[] tokens= topologyName.split(".");
 				System.out.println("topology name is : " + topologyZkname);
-				String key_ = "/Topologies/"+topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
+				String key_ = topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
 				if(m_hTopologyList.get(topologyName).Get(compName).getCompType() == Commons.BOLT)
 				{
 					IBolt bolt = (IBolt) componentClass.newInstance();
-				task.Init(topologyName, compName, instanceId, bolt, this);
+					task.Init(topologyName, compName, instanceId, bolt, this);
 				}
 				else
 				{
@@ -314,8 +318,8 @@ public class NodeManager implements Runnable{
 				
 				}
 				
-				m_oZooKeeper.create(key_,m_sNodeIP,createNodeCallback);
-				m_oZooKeeper.getData(key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
+				m_oZooKeeper.create("/Topologies/" + key_,m_sNodeIP,createNodeCallback);
+				m_oZooKeeper.getData("/Topologies/" + key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
 			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
 			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			}
@@ -427,6 +431,8 @@ public class NodeManager implements Runnable{
 		// add the source information to the tuple
 		tuple.SetSrcFieldInfo(task.m_sJobname, task.m_sComponentName, task.m_nInstanceId);
 		// add to disruptor queue
+		System.out.println("Received tuple from task " + task.m_sJobname + ":" +
+				task.m_sComponentName + ":" + Integer.toString(task.m_nInstanceId));
 		m_oOutputTupleQ.WriteData(tuple);
 	}
 
@@ -436,7 +442,7 @@ public class NodeManager implements Runnable{
 	// - wait to add all the tasks)
 
 	@SuppressWarnings("unchecked")
-	private void RetrieveTopologyComponents(String pathToJar, String TopologyName) // (Thrift)
+	private void RetrieveTopologyComponents(String pathToJar, String TopologyName, String fullClassName) // (Thrift)
 	{
 		// Get the topology from the jar.
 		// Receive the parallelism level
@@ -445,8 +451,8 @@ public class NodeManager implements Runnable{
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 
-			TopologyName = TopologyName.replace('/', '.');
-			Class<?> topologyClass = cl.loadClass(TopologyName);
+			fullClassName = fullClassName.replace('/', '.');
+			Class<?> topologyClass = cl.loadClass(fullClassName);
 			Object topologyObject = topologyClass.newInstance();
 
 			Method createTopology = topologyClass.getMethod("CreateTopology");
@@ -498,7 +504,7 @@ public class NodeManager implements Runnable{
 		// get the next comp list
 		Topology topo = m_hTopologyList.get(tuple.m_sJobname);
 		ArrayList<String> nextComp = topo.GetNextComponents(sSrc);
-		if(nextComp.size() > 0)
+		if(nextComp!= null && nextComp.size() > 0)
 		{
 			// assign dest to the first tuple
 			String firtComp = nextComp.get(0);
@@ -510,6 +516,7 @@ public class NodeManager implements Runnable{
 				String sFieldValue = tuple.GetStringValue(sFieldType);
 				int hash = Commons.Hash(sFieldValue);
 				inst = hash%topo.Get(firtComp).getParallelismLevel();
+				System.out.println("Grouping_field inst " + Integer.toString(inst) );
 				
 			} else {
 				inst = (int) (topo.Get(firtComp).nextTupleIndex() % 
@@ -573,6 +580,7 @@ public class NodeManager implements Runnable{
 		m_oMutexOutputTuple.lock();
 		for (int i = 0; i < tuples.size(); ++i) {
 			String sIP = GetNextNode(tuples.get(i));
+			System.out.println("next destination of tuple is " + sIP);
 			if(sIP == null) continue;
 			Queue<Tuple> queue = m_OutputTupleBucket.get(sIP);
 			if (queue == null)

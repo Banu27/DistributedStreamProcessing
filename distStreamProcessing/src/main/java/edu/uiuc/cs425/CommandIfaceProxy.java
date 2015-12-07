@@ -55,14 +55,14 @@ public class CommandIfaceProxy implements Iface{
 			}
 		}
 
-		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile, String jarFileName) throws TException {
-			m_oClient.ReceiveJobFromClient(TopologyName, Jarfile, jarFileName);
+		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile) throws TException {
+			m_oClient.ReceiveJobFromClient(TopologyName, Jarfile);
 			
 		}
 
 
-		public void CreateTask(String compName, String topologyname, int instanceId, String pathToJar) throws TException {
-			m_oClient.CreateTask(compName, topologyname, instanceId, pathToJar);
+		public void CreateTask(String compName, String topologyname, String fullClassName, int instanceId) throws TException {
+			m_oClient.CreateTask(compName, topologyname, fullClassName, instanceId);
 			
 		}
 
@@ -72,8 +72,11 @@ public class CommandIfaceProxy implements Iface{
 		}
 
 		public ByteBuffer GetJarFromMaster(String sTopologyName) throws TException {
-			// TODO Auto-generated method stub
 			return m_oClient.GetJarFromMaster(sTopologyName);
+		}
+
+		public void StartTopology(String sTopoloogy) throws TException {
+			m_oClient.StartTopology(sTopoloogy);			
 		}
 
 		

@@ -33,14 +33,14 @@ public class CommandIfaceImpl implements Iface {
 
 
 
-		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile, String JarFileName) throws TException {
-			m_oComponentManager.ReceiveNewJob(Jarfile, TopologyName, JarFileName);	
+		public void ReceiveJobFromClient(String TopologyName, ByteBuffer Jarfile) throws TException {
+			m_oComponentManager.ReceiveNewJob(Jarfile, TopologyName);	
 		}
 
 
 
-		public void CreateTask(String compName, String topologyname, int instanceId, String pathToJar) throws TException {
-			m_oNodeManager.CreateTask(compName, instanceId, topologyname, pathToJar);
+		public void CreateTask(String compName, String topologyname, String fullClassName, int instanceId) throws TException {
+			m_oNodeManager.CreateTask(compName, instanceId, topologyname,fullClassName);
 		}
 
 
@@ -56,6 +56,17 @@ public class CommandIfaceImpl implements Iface {
 		public ByteBuffer GetJarFromMaster(String sTopologyName) throws TException {
 			return m_oComponentManager.GetJarFromMaster(sTopologyName);
 		}
+
+
+
+
+		public void StartTopology(String sTopoloogy) throws TException {
+			m_oNodeManager.StartTopology(sTopoloogy);	
+		}
+
+
+
+
 
 
 

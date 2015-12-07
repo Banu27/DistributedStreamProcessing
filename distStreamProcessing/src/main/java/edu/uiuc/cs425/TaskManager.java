@@ -14,6 +14,13 @@ public class TaskManager implements Runnable {
 	public TaskManager()
 	{
 		m_oDisruptor = null;
+		m_oBolt = null;
+		m_oSpout = null;
+	}
+	
+	public int GetInstance()
+	{
+		return m_nInstanceId;
 	}
 	
 	public void Init(String jobName, String compName, int id, IBolt obj, NodeManager oNM)
@@ -38,9 +45,18 @@ public class TaskManager implements Runnable {
 		m_nInstanceId			= id;
 		m_oSpout				= obj;
 		m_oNM					= oNM;
+		// cast to Bcomponents and set task manager
+		BComponent comp = (BComponent)m_oSpout;
+		comp.SetTaskManager(this);
 		m_SpoutThread 			= new Thread(this);
-		m_SpoutThread.start();
+		
 
+	}
+	
+	public void Start()
+	{
+		if(m_oSpout != null)
+			m_SpoutThread.start();
 	}
 	
 	// this call is made by spout/bolt when they emit tuples. the emit impl is in the BComponent class
