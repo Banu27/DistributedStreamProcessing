@@ -81,7 +81,7 @@ public class ZooKeeperWrapper {
 		byte [] dataByte = data.getBytes();
 		//Persistent znode - stay in ensemble until client closes it
 		//Ephemeral znode  - temporary
-		m_oZooKeeper.create(path, dataByte, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT,createNodeCallback, null);
+		m_oZooKeeper.create(path, dataByte, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL,createNodeCallback, null);
 		
 	}
 

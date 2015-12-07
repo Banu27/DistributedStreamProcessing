@@ -165,8 +165,6 @@ public class NodeManager implements Runnable{
 	
 	public void UpdateClusterInfo(String zNodePath)
 	{
-		//zNodePath = zNodePath.replace('/', ':');
-		//zNodePath[0] = '/';
 		try {
 			String data = m_oZooKeeper.read(zNodePath);
 			String [] tokens = zNodePath.split("/");
@@ -271,7 +269,7 @@ public class NodeManager implements Runnable{
 
 	public void CreateTask(String compName, int instanceId, String topologyName, String fullClassName) {
 		try {
-			//String pathToJar = m_sJarFilesDir + "/" + topologyName + ".jar";
+		
 			// check if file is available, else request file from master
 			m_oLogger.Info("Creating task in NM");
 			String pathToJar = m_sJarFilesDir + "/" + topologyName  +".jar";
@@ -290,6 +288,7 @@ public class NodeManager implements Runnable{
 			URL[] urls = { new URL("jar:file:" + pathToJar + "!/") };
 			URLClassLoader cl = URLClassLoader.newInstance(urls);
 			//String[] topologyZkName = topologyName.split("/");
+			//topologyName = topologyName.replace('/', '.');
 			m_oLogger.Info("Retrieving topology : " + topologyName);
 			System.out.println("Retrieving topology : " + topologyName);
 			Topology componentsTopology = m_hTopologyList.get(topologyName);
@@ -300,9 +299,8 @@ public class NodeManager implements Runnable{
 				m_oLogger.Info("Class name retrieved : " + classname);
 				Class<?> componentClass = cl.loadClass(classname);
 			
-			// there are two possible components - spout and bolt
+				// there are two possible components - spout and bolt
 				TaskManager task = new TaskManager();
-				//String[] tokens= topologyName.split(".");
 				System.out.println("topology name is : " + topologyZkname);
 				String key_ = topologyZkname + ":" + compName + ":" + Integer.toString(instanceId);
 				m_hTaskMap.put(key_, task);
@@ -317,11 +315,8 @@ public class NodeManager implements Runnable{
 					task.Init(topologyName, compName, instanceId, spout, this);
 				
 				}
-				
 				m_oZooKeeper.create("/Topologies/" + key_,m_sNodeIP,createNodeCallback);
 				m_oZooKeeper.getData("/Topologies/" + key_, ComponentDataChangeWatcher, ComponentDataChangeCallback, null);
-			//ZooKeeper zk = m_oZooKeepeer.createZKInstance(m_sZooKeeperConnectionIP, this);
-			//DataMonitor dm = new DataMonitor(zk, pathToZnodeInstance, null, this);
 			}
 			else
 			{
@@ -353,11 +348,6 @@ public class NodeManager implements Runnable{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		// Method createTopology = componentClass.getMethod("CreateTopology");
-		// m_hTopologyList.put(JobName, (List<TopologyComponent>)
-		// createTopology.invoke(topologyObject));
-
 	}
 	
 	StringCallback createNodeCallback = new StringCallback() {
@@ -496,7 +486,7 @@ public class NodeManager implements Runnable{
 	}
 
 	// code to identify the next component
-	ArrayList<Tuple> IdentifyNextComponents(Tuple tuple) {
+	public ArrayList<Tuple> IdentifyNextComponents(Tuple tuple) {
 		
 		ArrayList<Tuple> tuples = new ArrayList<Tuple>();
 		// get the source component
@@ -604,9 +594,7 @@ public class NodeManager implements Runnable{
 		} else
 		{
 			m_oLogger.Error("Tuple send to wrong node. Tuple will not move forward");
-		}
-		
-		
+		}	
 	}
 
 	public void ReceiveTuplesFromOutside(List<ByteBuffer> tuples)
@@ -634,34 +622,34 @@ public class NodeManager implements Runnable{
 			// get the keys
 			Set<String> sIPs = m_OutputTupleBucket.keySet();
 			if( sIPs != null) {
-			// iterate through the keysq
-			for (String sIP : sIPs) {
-				// send list of tuples to the other node
-				Queue<Tuple> queue = m_OutputTupleBucket.get(sIP);
-				List<ByteBuffer> serTuples = new ArrayList<ByteBuffer>();
-				while (queue.size() > 0) {
-					serTuples.add(ByteBuffer.wrap(queue.peek().Serialize()));
-					queue.remove();
-				}
+				// iterate through the keysq
+				for (String sIP : sIPs) {
+					// send list of tuples to the other node
+					Queue<Tuple> queue = m_OutputTupleBucket.get(sIP);
+					List<ByteBuffer> serTuples = new ArrayList<ByteBuffer>();
+					while (queue.size() > 0) {
+						serTuples.add(ByteBuffer.wrap(queue.peek().Serialize()));
+						queue.remove();
+					}
 
-				// check if it is the same node and directly add to input
-				// disruptor
-				if (sIP.equals(m_sMyIp)) {
-					ReceiveTuplesFromOutside(serTuples);
-				} else {
-					// call proxy to send the tuples
-					CommandIfaceProxy prxy = null;
-					if (m_hIPtoProxy.containsKey(sIP)) {
-						prxy = m_hIPtoProxy.get(sIP);
+					// check if it is the same node and directly add to input
+					// disruptor
+					if (sIP.equals(m_sMyIp)) {
+						ReceiveTuplesFromOutside(serTuples);
 					} else {
-						prxy = new CommandIfaceProxy();
-						if (Commons.FAILURE == prxy.Initialize(sIP, m_oConfig.CmdPort(), m_oLogger)) {
-							m_oLogger.Error("unable to connect to worker to send tuples " + sIP);
-							continue;
+						// call proxy to send the tuples
+						CommandIfaceProxy prxy = null;
+						if (m_hIPtoProxy.containsKey(sIP)) {
+							prxy = m_hIPtoProxy.get(sIP);
+						} else {
+							prxy = new CommandIfaceProxy();
+							if (Commons.FAILURE == prxy.Initialize(sIP, m_oConfig.CmdPort(), m_oLogger)) {
+								m_oLogger.Error("unable to connect to worker to send tuples " + sIP);
+								continue;
+							}
 						}
 					}
 				}
-			}
 			}
 
 			m_oMutexOutputTuple.unlock();
