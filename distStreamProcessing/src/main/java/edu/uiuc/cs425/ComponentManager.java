@@ -372,13 +372,6 @@ public class ComponentManager implements Runnable {
 
 	}
 
-
-
-	// private long GetMyLocalTime()
-	// {
-	// return new Date().getTime();
-	// }
-
 	private void ReSched(String sIP) {
 		// remove from zookeeper
 		deleteZnode("/Workers/" + sIP);
@@ -447,13 +440,6 @@ public class ComponentManager implements Runnable {
 		}
 	}
 
-	// public void cleanZK()
-	// {
-	// if(m_oZooKeeperWrapper.exists("/Workers"))
-	// deleteZnode("/Workers");
-
-	// }
-
 	public void deleteZnode(String node) {
 		if (m_oZooKeeperWrapper.GetChildren(node).isEmpty()) {
 			try {
@@ -491,9 +477,7 @@ public class ComponentManager implements Runnable {
 			System.out.println("Usage: java -cp ~/distStreamProcessing.jar edu.uiuc.cs425.ComponentManager <xml_path>");
 			System.exit(Commons.FAILURE);
 		}
-		///Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml
 		String sXML = args[0];
-		//String sXML = "/Users/banumuthukumar/Desktop/cs425/MP4/DistributedStreamProcessing/distStreamProcessing/config.xml";
 		final ConfigAccessor m_oConfig = new ConfigAccessor();
 
 		// instantiate logger and config accessor
