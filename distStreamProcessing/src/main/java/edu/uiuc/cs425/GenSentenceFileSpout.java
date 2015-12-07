@@ -10,9 +10,9 @@ public class GenSentenceFileSpout extends BComponent implements ISpout {
 	private String sFolderPath;
 	private BufferedReader bufferedReader;
 	
-	private GenSentenceFileSpout()
+	public GenSentenceFileSpout()
 	{
-		sFolderPath = "/home/ajayaku2/dataset/";
+		sFolderPath = "/home/ajayaku2/mp4/dataset/";
 		bufferedReader = null;
 	}
 
@@ -21,7 +21,7 @@ public class GenSentenceFileSpout extends BComponent implements ISpout {
 			if(bufferedReader == null) 
 			{
 				
-					File file = new File(sFolderPath + Integer.toString(getInstance()));
+					File file = new File(sFolderPath + Integer.toString(getInstance()) + ".txt");
 					FileReader fileReader = new FileReader(file);
 					bufferedReader = new BufferedReader(fileReader);
 			}

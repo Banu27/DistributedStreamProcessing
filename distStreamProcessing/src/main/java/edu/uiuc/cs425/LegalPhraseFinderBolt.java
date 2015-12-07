@@ -18,7 +18,7 @@ public class LegalPhraseFinderBolt extends BComponent implements IBolt {
 	{
 		m_hCounter = new HashMap<String, Long>();
 		
-		String filePath = "/home/muthkmr2/mp4/dataset/data";
+		String filePath = "/home/ajayaku2/mp4/dataset/database";
 		m_sOutputFolderPath = null;
 		
 		try {
@@ -39,7 +39,7 @@ public class LegalPhraseFinderBolt extends BComponent implements IBolt {
 	
 	public void execute(Tuple tuple) {
 		// get the word
-		String word = tuple.GetStringValue("word");
+		String word = tuple.GetStringValue("word").toLowerCase();
 		//check if there is a key in the hash map
 		if(m_hCounter.containsKey(word))
 		{
@@ -49,7 +49,7 @@ public class LegalPhraseFinderBolt extends BComponent implements IBolt {
 			//Print here
 			if(m_sOutputFolderPath == null)
 			{
-				m_sOutputFolderPath = "/home/muthkmr2/mp4/dataset/output";
+				m_sOutputFolderPath = "/home/ajayaku2/mp4/dataset/output";
 				File file = new File(m_sOutputFolderPath + Integer.toString(getInstance()));
 				try {
 					file.createNewFile();
