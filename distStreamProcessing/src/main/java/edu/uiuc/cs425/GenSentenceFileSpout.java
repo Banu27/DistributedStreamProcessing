@@ -1,6 +1,9 @@
 package edu.uiuc.cs425;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class GenSentenceFileSpout extends BComponent implements ISpout {
 	
@@ -14,10 +17,29 @@ public class GenSentenceFileSpout extends BComponent implements ISpout {
 	}
 
 	public void nextTuple() {
-		if(bufferedReader == null) 
-		{
-			
-		}
+		try {
+			if(bufferedReader == null) 
+			{
+				
+					File file = new File(sFolderPath + Integer.toString(getInstance()));
+					FileReader fileReader = new FileReader(file);
+					bufferedReader = new BufferedReader(fileReader);
+			}
+		
+			Commons.sleep(100);
+			String line;
+			if ((line = bufferedReader.readLine()) != null) {
+				if(line != null && line.length() >= 3)
+				{
+					Tuple tuple = new Tuple();
+					tuple.AddElement("sentence", line);
+					emit(tuple);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
+		
 	}
 	
 }

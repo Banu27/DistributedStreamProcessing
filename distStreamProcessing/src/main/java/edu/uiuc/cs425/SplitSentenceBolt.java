@@ -9,9 +9,12 @@ public class SplitSentenceBolt extends BComponent implements IBolt {
 		// emit each word
 		for( String str: tokens)
 		{
-			Tuple outTuple = new Tuple();
-			outTuple.AddElement("word", str);
-			emit(outTuple);
+			if(str != null && str.length() >=3)
+			{
+				Tuple outTuple = new Tuple();
+				outTuple.AddElement("word", str);
+				emit(outTuple);
+			}
 		}	
 	}
 }
