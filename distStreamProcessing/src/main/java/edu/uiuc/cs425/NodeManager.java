@@ -421,8 +421,8 @@ public class NodeManager implements Runnable{
 		// add the source information to the tuple
 		tuple.SetSrcFieldInfo(task.m_sJobname, task.m_sComponentName, task.m_nInstanceId);
 		// add to disruptor queue
-		System.out.println("Received tuple from task " + task.m_sJobname + ":" +
-				task.m_sComponentName + ":" + Integer.toString(task.m_nInstanceId));
+		//System.out.println("Received tuple from task " + task.m_sJobname + ":" +
+				//task.m_sComponentName + ":" + Integer.toString(task.m_nInstanceId));
 		m_oOutputTupleQ.WriteData(tuple);
 	}
 
@@ -570,7 +570,7 @@ public class NodeManager implements Runnable{
 		m_oMutexOutputTuple.lock();
 		for (int i = 0; i < tuples.size(); ++i) {
 			String sIP = GetNextNode(tuples.get(i));
-			System.out.println("next destination of tuple is " + sIP);
+			//System.out.println("next destination of tuple is " + sIP);
 			if(sIP == null) 
 			{
 				System.out.println("NULL");
@@ -651,6 +651,12 @@ public class NodeManager implements Runnable{
 								m_oLogger.Error("unable to connect to worker to send tuples " + sIP);
 								continue;
 							}
+							
+						}
+						try {
+							prxy.TransferTupleToNode(serTuples.size(), serTuples);
+						} catch (TException e) {
+							e.printStackTrace();
 						}
 					}
 				}
