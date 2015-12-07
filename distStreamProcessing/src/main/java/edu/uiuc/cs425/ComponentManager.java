@@ -295,7 +295,7 @@ public class ComponentManager implements Runnable {
 				m_WorkerListLock.unlock();
 				
 				//sleep for a while to wait for all components to come up
-				Commons.sleep(500);
+				Commons.sleep(2000);
 				
 				// send startCommand
 				m_WorkerListLock.lock();
