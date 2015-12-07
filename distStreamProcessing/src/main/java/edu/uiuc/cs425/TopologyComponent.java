@@ -31,7 +31,7 @@ public class TopologyComponent {
 	
 	public long nextTupleIndex()
 	{
-		return m_nCurrTupleCount++;
+		return m_nCurrTupleCount++ % 1000;
 	}
 	
 	public int getCompType()
