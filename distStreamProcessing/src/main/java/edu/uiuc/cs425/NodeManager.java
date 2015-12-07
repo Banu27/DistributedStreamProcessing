@@ -509,8 +509,8 @@ public class NodeManager implements Runnable{
 				//System.out.println("Grouping_field inst " + Integer.toString(inst) );
 				
 			} else {
-				inst = (int) (topo.Get(firtComp).nextTupleIndex() % 
-						topo.Get(firtComp).getParallelismLevel());
+				inst = topo.Get(firtComp).nextTupleIndex() % 
+						topo.Get(firtComp).getParallelismLevel();
 			}
 			tuple.m_nDestInstId = inst;
 			tuple.m_sDestCompName = firtComp;
@@ -531,8 +531,8 @@ public class NodeManager implements Runnable{
 					inst = hash%topo.Get(nextCompName).getParallelismLevel();
 					
 				} else {
-					inst = (int) (topo.Get(nextCompName).nextTupleIndex() % 
-							topo.Get(nextCompName).getParallelismLevel());
+					inst = topo.Get(nextCompName).nextTupleIndex() % 
+							topo.Get(nextCompName).getParallelismLevel();
 				}
 				tuple.m_nDestInstId = inst;
 				tuple.m_sDestCompName = nextCompName;
